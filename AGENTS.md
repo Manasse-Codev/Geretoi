@@ -28,6 +28,7 @@ React + Vite + TypeScript, Tailwind CSS, Zustand, vite-plugin-pwa, Firebase (Aut
 
 ## Design
 Style néomorphisme (soft UI) : surfaces monochromes, ombres douces doubles, éléments en relief et en creux. Tokens de couleur dans src/styles/tokens.css (et docs/DESIGN.md quand il existe). Contraste texte ≥ 4.5:1, éléments graphiques ≥ 3:1, cibles tactiles ≥ 44 px. Ne jamais s'appuyer sur la couleur ou l'ombre seule (toujours icône + libellé). Respecter prefers-reduced-motion. Animer uniquement transform et opacity (et stroke-dashoffset pour les anneaux).
+- Exception de durée : remplissage des anneaux (stroke-dashoffset) et barres de progression (transform: scaleX) peuvent durer jusqu'à 800 ms ; sous prefers-reduced-motion, afficher directement leur valeur finale.
 
 ## Code
 - TypeScript strict, pas de any.

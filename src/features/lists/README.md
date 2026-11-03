@@ -1,1 +1,1 @@
-Contient les futures listes et étiquettes.
+Gestion des listes utilisateur dans `users/{uid}/lists`, sans écran métier.

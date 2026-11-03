@@ -1,18 +1,133 @@
-rules_version='2'
-
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 12, 3);
+    // Modèle attendu : users/{uid}/profile/preferences, lists/{listId},
+    // tags/{tagId} et tasks/{taskId}. Les documents tâche refusent les champs inconnus.
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validList(list) {
+      return list is map &&
+        list.keys().hasOnly(['name', 'color', 'icon', 'order', 'createdAt', 'updatedAt']) &&
+        list.keys().hasAll(['name']) &&
+        list.name is string && list.name.size() >= 1 && list.name.size() <= 80 &&
+        optionalString(list, 'color', 32) &&
+        optionalString(list, 'icon', 64) &&
+        (!('order' in list) || (list.order is int && list.order >= 0 && list.order <= 10000)) &&
+        optionalTimestamp(list, 'createdAt') &&
+        optionalTimestamp(list, 'updatedAt');
+    }
+
+    function validTag(tag) {
+      return tag is map &&
+        tag.keys().hasOnly(['name', 'color', 'order', 'createdAt', 'updatedAt']) &&
+        tag.keys().hasAll(['name']) &&
+        tag.name is string && tag.name.size() >= 1 && tag.name.size() <= 80 &&
+        optionalString(tag, 'color', 32) &&
+        (!('order' in tag) || (tag.order is int && tag.order >= 0 && tag.order <= 10000)) &&
+        optionalTimestamp(tag, 'createdAt') &&
+        optionalTimestamp(tag, 'updatedAt');
+    }
+
+    function hasOnlyTaskFields(task) {
+      return task.keys().hasOnly([
+        'title', 'description', 'status', 'completedAt', 'deletedAt', 'dueDate',
+        'priority', 'startTime', 'estimatedMinutes', 'listId', 'tags', 'links',
+        'subtasks', 'recurrence', 'reminders', 'createdAt', 'updatedAt'
+      ]);
+    }
+
+    function optionalTimestamp(task, field) {
+      return !(field in task) || task[field] == null || task[field] is timestamp;
+    }
+
+    function optionalString(task, field, maxLength) {
+      return !(field in task) || task[field] == null ||
+        (task[field] is string && task[field].size() <= maxLength);
+    }
+
+    function optionalBoundedList(task, field, maxSize) {
+      return !(field in task) || task[field] == null ||
+        (task[field] is list && task[field].size() <= maxSize);
+    }
+
+    function validRecurrence(value) {
+      return value == null || (
+        value is map && value.keys().hasOnly(['type', 'interval', 'days']) &&
+        value.keys().hasAll(['type']) &&
+        value.type in ['daily', 'weekly', 'monthly', 'yearly'] &&
+        (!('interval' in value) || (value.interval is int && value.interval >= 1 && value.interval <= 365)) &&
+        (!('days' in value) || (value.days is list && value.days.size() <= 7))
+      );
+    }
+
+    function validTask(task) {
+      return task is map &&
+        hasOnlyTaskFields(task) &&
+        task.keys().hasAll(['title', 'status', 'priority']) &&
+        task.title is string && task.title.size() >= 1 && task.title.size() <= 200 &&
+        task.status in ['active', 'done'] &&
+        ((task.status == 'done' && task.get('completedAt', null) is timestamp) ||
+          (task.status == 'active' && task.get('completedAt', null) == null)) &&
+        task.priority in [1, 2, 3, 4] &&
+        optionalString(task, 'description', 10000) &&
+        optionalTimestamp(task, 'completedAt') &&
+        optionalTimestamp(task, 'deletedAt') &&
+        optionalTimestamp(task, 'dueDate') &&
+        optionalTimestamp(task, 'createdAt') &&
+        optionalTimestamp(task, 'updatedAt') &&
+        optionalString(task, 'startTime', 5) &&
+        (!('estimatedMinutes' in task) || task.estimatedMinutes == null ||
+          (task.estimatedMinutes is number && task.estimatedMinutes >= 0 && task.estimatedMinutes <= 1440)) &&
+        optionalString(task, 'listId', 128) &&
+        optionalBoundedList(task, 'subtasks', 50) &&
+        optionalBoundedList(task, 'tags', 20) &&
+        optionalBoundedList(task, 'links', 20) &&
+        optionalBoundedList(task, 'reminders', 10) &&
+        validRecurrence(task.get('recurrence', null));
+    }
+
+    function validPreferences(preferences) {
+      return preferences is map &&
+        preferences.keys().hasOnly(['theme', 'language', 'firstDayOfWeek', 'timeFormat']) &&
+        preferences.keys().hasAll(['theme', 'language', 'firstDayOfWeek', 'timeFormat']) &&
+        preferences.theme in ['light', 'dark', 'auto'] &&
+        preferences.language in ['fr', 'en'] &&
+        preferences.firstDayOfWeek in ['monday', 'sunday'] &&
+        preferences.timeFormat in ['12h', '24h'];
+    }
+
+    match /users/{uid}/profile/{profileId} {
+      allow read: if isOwner(uid) && profileId == 'preferences';
+      allow create, update: if isOwner(uid) && profileId == 'preferences' && validPreferences(request.resource.data);
+      allow delete: if isOwner(uid) && profileId == 'preferences';
+    }
+
+    match /users/{uid}/lists/{listId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validList(request.resource.data);
+      allow update: if isOwner(uid) && validList(request.resource.data) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
+      allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/tags/{tagId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validTag(request.resource.data);
+      allow update: if isOwner(uid) && validTag(request.resource.data) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
+      allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/tasks/{taskId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validTask(request.resource.data);
+      allow update: if isOwner(uid) && validTask(request.resource.data) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
+      allow delete: if isOwner(uid) &&
+        resource.data.deletedAt is timestamp &&
+        resource.data.deletedAt <= request.time - duration.value(30, 'd');
     }
   }
 }

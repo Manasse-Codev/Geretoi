@@ -26,7 +26,7 @@ DayFlow est une **Progressive Web App** (installable, utilisable hors-ligne, syn
 - Revue du soir : bilan de la journée et préparation du lendemain
 
 ### 3. Priorités et classement
-- 4 niveaux de priorité (urgent, haute, normale, basse) avec code couleur
+- 4 niveaux de priorité : 1 urgente, 2 haute, 3 normale (par défaut), 4 basse. Chaque niveau est accompagné d'un libellé et d'une icône ; la couleur n'est jamais le seul indicateur.
 - Matrice d'Eisenhower (urgent / important) en option
 - Tri : date, priorité, durée, ordre manuel, alphabétique
 - Réorganisation manuelle par glisser-déposer
@@ -161,7 +161,7 @@ Pour envoyer des rappels quand l'app est fermée, un petit serveur est nécessai
 users/{uid}
 ├── profile            # préférences (thème, langue, etc.)
 ├── lists/{listId}     # name, color, icon, order
-├── tags/{tagId}       # name, color
+├── tags/{tagId}       # name, color, order, createdAt, updatedAt
 └── tasks/{taskId}
     ├── title, description, status
     ├── priority, dueDate, startTime, estimatedMinutes
@@ -172,18 +172,11 @@ users/{uid}
     └── createdAt, updatedAt, deletedAt
 ```
 
+La priorité `priority` est un entier : `1` = urgente, `2` = haute, `3` = normale (valeur par défaut) et `4` = basse. L'interface associe à chaque niveau un libellé et une icône, sans s'appuyer sur la couleur seule.
+
 ### Règles de sécurité (extrait)
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-  }
-}
-```
+Les règles complètes et normatives sont dans `firestore.rules` : elles valident chaque schéma et réservent l'accès au propriétaire. Ne pas remplacer ces règles par une autorisation générique sur toutes les sous-collections.
 
 > Les requêtes combinées (ex. date + priorité) nécessitent des index composites : Firebase propose un lien de création automatique dans la console quand une requête en a besoin.
 
@@ -339,24 +332,25 @@ MIT — libre d'utilisation et de modification.
 
 ### 1. Principes
 
-- Utiliser uniquement le plan Spark ; aucun compte de facturation ne doit être lié au projet.
+- Rester sur le plan Spark et ne lier aucun compte de facturation.
 - Services autorisés : Firebase Authentication, Cloud Firestore et Firebase Cloud Messaging.
-- Services interdits : Cloud Functions, Cloud Storage et Firebase Hosting. Le front est hébergé sur Cloudflare Pages et les notifications push passeront par un Cloudflare Worker.
-- Maintenir deux projets Firebase séparés : `dayflow-dev` pour le développement, les émulateurs et les agents de code ; `dayflow-prod` pour les données réelles. Ne jamais développer contre la production.
+- Services interdits : Cloud Functions, Cloud Storage et Firebase Hosting. Le front est hébergé sur Cloudflare Pages ; les notifications push passeront par un Cloudflare Worker.
+- Utiliser deux projets séparés : `dayflow-dev` pour le développement et les émulateurs, `dayflow-prod` pour les données réelles. Ne jamais développer contre la production.
 
 ### 2. Configuration et secrets
 
-- Les valeurs de configuration viennent uniquement des variables `VITE_FIREBASE_*`, définies dans un fichier `.env` non versionné. Le modèle est dans `.env.example`.
+- Les valeurs viennent uniquement des variables `VITE_FIREBASE_*` d'un fichier `.env` non versionné ; `.env.example` en est le modèle. `VITE_USE_EMULATORS=true` active les émulateurs uniquement en mode développement.
 - Ne coder en dur aucune clé ni aucun ID de projet.
 - La clé API web Firebase n'est pas un secret : ce sont les règles de sécurité Firestore qui protègent les données.
 - Ne jamais committer de fichier `.env`.
 
 ### 3. Modèle de données
 
-- Chemins prévus : `users/{uid}/tasks`, `users/{uid}/lists`, `users/{uid}/tags` et `users/{uid}/profile`.
+- Chemins : `users/{uid}/tasks/{taskId}`, `users/{uid}/lists/{listId}`, `users/{uid}/tags/{tagId}` et `users/{uid}/profile/preferences`. Firestore impose un chemin de document avec un nombre pair de segments : le document de préférences est nommé `preferences` dans la sous-collection `profile`.
+- Une tâche contient notamment `title`, `status`, `priority` (`1` à `4`), `dueDate`, `completedAt`, `deletedAt`, `listId`, `tags`, `links`, `subtasks`, `recurrence`, `reminders`, `createdAt` et `updatedAt`.
 - Statuts de tâche : `status: "active" | "done"`. Renseigner `completedAt` à la complétion pour alimenter l'historique, et `deletedAt` à la suppression pour la corbeille de 30 jours, purgée côté client à l'ouverture de l'application.
 - Ne jamais supprimer définitivement une tâche immédiatement.
-- Stocker les sous-tâches, liens et rappels dans des tableaux du document de la tâche.
+- Stocker sous-tâches, liens et rappels dans des tableaux du document de la tâche. Les limites de règles sont respectivement 50 sous-tâches, 20 tags, 20 liens et 10 rappels par tâche.
 - Les pièces jointes sont des liens uniquement ; aucun fichier n'est stocké.
 
 ### 4. Règles de requêtes (économie de quotas)
@@ -367,7 +361,7 @@ MIT — libre d'utilisation et de modification.
 - Éviter les écritures fréquentes sur un même document (par exemple, le minuteur Pomodoro) : écrire à la fin de la session.
 - Regrouper les écritures multiples avec `writeBatch`.
 - Déclarer les index composites dans `firestore.indexes.json` et versionner ce fichier.
-- Ordres de grandeur actuels du quota gratuit Cloud Firestore : 50 000 lectures, 20 000 écritures et 20 000 suppressions par jour, et 1 Gio de données stockées. Les quotas peuvent évoluer ; consulter la [documentation officielle des tarifs Firestore](https://firebase.google.com/docs/firestore/pricing). Les quotas gratuits sont réinitialisés chaque jour ; les requêtes dépassant un quota sont refusées jusqu'à sa réinitialisation, au lieu d'entraîner une facturation automatique.
+- Ordres de grandeur du plan Spark à revérifier sur la [documentation officielle des tarifs Firestore](https://firebase.google.com/docs/firestore/pricing) : environ 50 000 lectures et 20 000 écritures par jour et 1 Gio de stockage. Ces quotas évoluent ; au-delà, le service est suspendu jusqu'à la réinitialisation au lieu de facturer.
 
 ### 5. Hors-ligne et synchronisation
 
@@ -381,58 +375,155 @@ MIT — libre d'utilisation et de modification.
 - Utiliser `signInWithPopup` sur ordinateur et `signInWithRedirect` sur mobile ou dans la PWA installée.
 - Attendre `onAuthStateChanged` avant d'afficher l'application et présenter un écran de chargement pendant cette attente.
 - Ajouter le domaine de production (`*.pages.dev` ou le domaine personnalisé) à la liste des domaines autorisés.
+- **Attention à Google sur Cloudflare Pages :** `signInWithRedirect` peut échouer sur les navigateurs qui bloquent le stockage tiers lorsque l'application n'est pas hébergée sur Firebase Hosting. Tester ce parcours au premier déploiement Cloudflare Pages. Solutions possibles : utiliser la popup, configurer un proxy `/__/auth`, ou proposer la connexion par e-mail comme solution de secours.
 
 ### 7. Règles de sécurité Firestore
 
 Règles actuellement présentes dans `firestore.rules` :
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-  }
-}
-```
-
-Exemple de validation à adapter au modèle réel :
+Elles remplacent l'ancien extrait simplifié sous « Modèle de données Firestore » ; ce dernier est conservé comme présentation historique et n'est pas la source normative.
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function isOwner(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
 
-    function validTask(t) {
-      return t.title is string
-        && t.title.size() > 0 && t.title.size() <= 200
-        && t.status in ['active', 'done']
-        && t.priority in [1, 2, 3, 4];
+    function validList(list) {
+      return list is map &&
+        list.keys().hasOnly(['name', 'color', 'icon', 'order', 'createdAt', 'updatedAt']) &&
+        list.keys().hasAll(['name']) &&
+        list.name is string && list.name.size() >= 1 && list.name.size() <= 80 &&
+        optionalString(list, 'color', 32) &&
+        optionalString(list, 'icon', 64) &&
+        (!('order' in list) || (list.order is int && list.order >= 0 && list.order <= 10000)) &&
+        optionalTimestamp(list, 'createdAt') &&
+        optionalTimestamp(list, 'updatedAt');
+    }
+
+    function validTag(tag) {
+      return tag is map &&
+        tag.keys().hasOnly(['name', 'color', 'order', 'createdAt', 'updatedAt']) &&
+        tag.keys().hasAll(['name']) &&
+        tag.name is string && tag.name.size() >= 1 && tag.name.size() <= 80 &&
+        optionalString(tag, 'color', 32) &&
+        (!('order' in tag) || (tag.order is int && tag.order >= 0 && tag.order <= 10000)) &&
+        optionalTimestamp(tag, 'createdAt') &&
+        optionalTimestamp(tag, 'updatedAt');
+    }
+
+    function hasOnlyTaskFields(task) {
+      return task.keys().hasOnly([
+        'title', 'description', 'status', 'completedAt', 'deletedAt', 'dueDate',
+        'priority', 'startTime', 'estimatedMinutes', 'listId', 'tags', 'links',
+        'subtasks', 'recurrence', 'reminders', 'createdAt', 'updatedAt'
+      ]);
+    }
+
+    function optionalTimestamp(task, field) {
+      return !(field in task) || task[field] == null || task[field] is timestamp;
+    }
+
+    function optionalString(task, field, maxLength) {
+      return !(field in task) || task[field] == null ||
+        (task[field] is string && task[field].size() <= maxLength);
+    }
+
+    function optionalBoundedList(task, field, maxSize) {
+      return !(field in task) || task[field] == null ||
+        (task[field] is list && task[field].size() <= maxSize);
+    }
+
+    function validRecurrence(value) {
+      return value == null || (
+        value is map && value.keys().hasOnly(['type', 'interval', 'days']) &&
+        value.keys().hasAll(['type']) &&
+        value.type in ['daily', 'weekly', 'monthly', 'yearly'] &&
+        (!('interval' in value) || (value.interval is int && value.interval >= 1 && value.interval <= 365)) &&
+        (!('days' in value) || (value.days is list && value.days.size() <= 7))
+      );
+    }
+
+    function validTask(task) {
+      return task is map &&
+        hasOnlyTaskFields(task) &&
+        task.keys().hasAll(['title', 'status', 'priority']) &&
+        task.title is string && task.title.size() >= 1 && task.title.size() <= 200 &&
+        task.status in ['active', 'done'] &&
+        ((task.status == 'done' && task.get('completedAt', null) is timestamp) ||
+          (task.status == 'active' && task.get('completedAt', null) == null)) &&
+        task.priority in [1, 2, 3, 4] &&
+        optionalString(task, 'description', 10000) &&
+        optionalTimestamp(task, 'completedAt') &&
+        optionalTimestamp(task, 'deletedAt') &&
+        optionalTimestamp(task, 'dueDate') &&
+        optionalTimestamp(task, 'createdAt') &&
+        optionalTimestamp(task, 'updatedAt') &&
+        optionalString(task, 'startTime', 5) &&
+        (!('estimatedMinutes' in task) || task.estimatedMinutes == null ||
+          (task.estimatedMinutes is number && task.estimatedMinutes >= 0 && task.estimatedMinutes <= 1440)) &&
+        optionalString(task, 'listId', 128) &&
+        optionalBoundedList(task, 'subtasks', 50) &&
+        optionalBoundedList(task, 'tags', 20) &&
+        optionalBoundedList(task, 'links', 20) &&
+        optionalBoundedList(task, 'reminders', 10) &&
+        validRecurrence(task.get('recurrence', null));
+    }
+
+    function validPreferences(preferences) {
+      return preferences is map &&
+        preferences.keys().hasOnly(['theme', 'language', 'firstDayOfWeek', 'timeFormat']) &&
+        preferences.keys().hasAll(['theme', 'language', 'firstDayOfWeek', 'timeFormat']) &&
+        preferences.theme in ['light', 'dark', 'auto'] &&
+        preferences.language in ['fr', 'en'] &&
+        preferences.firstDayOfWeek in ['monday', 'sunday'] &&
+        preferences.timeFormat in ['12h', '24h'];
+    }
+
+    match /users/{uid}/profile/{profileId} {
+      allow read: if isOwner(uid) && profileId == 'preferences';
+      allow create, update: if isOwner(uid) && profileId == 'preferences' && validPreferences(request.resource.data);
+      allow delete: if isOwner(uid) && profileId == 'preferences';
+    }
+
+    match /users/{uid}/lists/{listId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validList(request.resource.data);
+      allow update: if isOwner(uid) && validList(request.resource.data) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
+      allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/tags/{tagId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validTag(request.resource.data);
+      allow update: if isOwner(uid) && validTag(request.resource.data) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
+      allow delete: if isOwner(uid);
     }
 
     match /users/{uid}/tasks/{taskId} {
       allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid) && validTask(request.resource.data);
-      allow delete: if isOwner(uid);
-    }
-
-    match /users/{uid}/{document=**} {
-      allow read, write: if isOwner(uid);
+      allow create: if isOwner(uid) && validTask(request.resource.data);
+      allow update: if isOwner(uid) && validTask(request.resource.data) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
+      allow delete: if isOwner(uid) &&
+        resource.data.deletedAt is timestamp &&
+        resource.data.deletedAt <= request.time - duration.value(30, 'd');
     }
   }
 }
 ```
 
-Cet exemple de validation est à adapter au modèle réel. Valider les règles avec l'outil de validation du serveur MCP Firebase s'il est disponible, puis les tester avec l'émulateur avant tout déploiement. Ne jamais utiliser `allow read, write: if true`, même temporairement. La règle générale sur `users/{uid}/{document=**}` donne aussi accès aux autres sous-collections ; pour imposer la validation à toutes les écritures de tâches, supprimer cette règle générique ou la restreindre aux autres collections afin qu'elle ne contourne pas la validation spécifique.
+Les tâches n'acceptent que les champs listés et valident les types, valeurs et limites ci-dessus. Les règles bornent la taille des tableaux (50 sous-tâches, 20 tags, 20 liens, 10 rappels) ; elles ne parcourent pas tous les éléments pour valider leur schéma. Les listes et tags n'acceptent que leurs champs documentés (`name`, `color`, `icon`, `order`, `createdAt`, `updatedAt`) et sont réservés au propriétaire. La suppression définitive d'une tâche n'est autorisée qu'après 30 jours avec un `deletedAt` valide. Aucune règle générique ne donne accès aux autres chemins. Valider les règles avec l'outil MCP Firebase s'il est disponible, puis les tester avec l'émulateur avant déploiement. Ne jamais utiliser `allow read, write: if true`, même temporairement.
 
 ### 8. Développement local
 
-- Démarrer les émulateurs Auth et Firestore avec `npm run emulators`.
+- Démarrer les émulateurs Auth et Firestore avec `npm run emulators` ; exécuter les tests de règles seuls avec `npm run test:rules`.
+- `npm run test:rules` et `npm run test:integration` réutilisent les émulateurs déjà actifs ; sinon, ils démarrent uniquement les émulateurs nécessaires.
+- Les ports, définis dans `firebase.json` et utilisés par le client, sont Auth `9099`, Firestore `18080` et WebSocket Firestore `19150`. Les scripts npm s'appuient sur cette configuration.
 - Ne jamais pointer l'environnement de développement vers les données réelles.
 - Versionner `firestore.rules`, `firestore.indexes.json` et `firebase.json`.
 
