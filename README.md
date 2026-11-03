@@ -334,3 +334,119 @@ Les données sont stockées dans votre projet Firestore personnel, rattachées �
 ## 📄 Licence
 
 MIT — libre d'utilisation et de modification.
+
+## 🔥 Règles Firebase
+
+### 1. Principes
+
+- Utiliser uniquement le plan Spark ; aucun compte de facturation ne doit être lié au projet.
+- Services autorisés : Firebase Authentication, Cloud Firestore et Firebase Cloud Messaging.
+- Services interdits : Cloud Functions, Cloud Storage et Firebase Hosting. Le front est hébergé sur Cloudflare Pages et les notifications push passeront par un Cloudflare Worker.
+- Maintenir deux projets Firebase séparés : `dayflow-dev` pour le développement, les émulateurs et les agents de code ; `dayflow-prod` pour les données réelles. Ne jamais développer contre la production.
+
+### 2. Configuration et secrets
+
+- Les valeurs de configuration viennent uniquement des variables `VITE_FIREBASE_*`, définies dans un fichier `.env` non versionné. Le modèle est dans `.env.example`.
+- Ne coder en dur aucune clé ni aucun ID de projet.
+- La clé API web Firebase n'est pas un secret : ce sont les règles de sécurité Firestore qui protègent les données.
+- Ne jamais committer de fichier `.env`.
+
+### 3. Modèle de données
+
+- Chemins prévus : `users/{uid}/tasks`, `users/{uid}/lists`, `users/{uid}/tags` et `users/{uid}/profile`.
+- Statuts de tâche : `status: "active" | "done"`. Renseigner `completedAt` à la complétion pour alimenter l'historique, et `deletedAt` à la suppression pour la corbeille de 30 jours, purgée côté client à l'ouverture de l'application.
+- Ne jamais supprimer définitivement une tâche immédiatement.
+- Stocker les sous-tâches, liens et rappels dans des tableaux du document de la tâche.
+- Les pièces jointes sont des liens uniquement ; aucun fichier n'est stocké.
+
+### 4. Règles de requêtes (économie de quotas)
+
+- Toujours utiliser des requêtes ciblées avec `limit()` ; ne jamais écouter une collection entière.
+- N'utiliser le temps réel que pour Aujourd'hui, En retard et À venir. Charger l'historique et la corbeille à la demande, par pages de 20 éléments.
+- Les lectures servies par le cache local ne consomment pas le quota de lectures serveur.
+- Éviter les écritures fréquentes sur un même document (par exemple, le minuteur Pomodoro) : écrire à la fin de la session.
+- Regrouper les écritures multiples avec `writeBatch`.
+- Déclarer les index composites dans `firestore.indexes.json` et versionner ce fichier.
+- Ordres de grandeur actuels du quota gratuit Cloud Firestore : 50 000 lectures, 20 000 écritures et 20 000 suppressions par jour, et 1 Gio de données stockées. Les quotas peuvent évoluer ; consulter la [documentation officielle des tarifs Firestore](https://firebase.google.com/docs/firestore/pricing). Les quotas gratuits sont réinitialisés chaque jour ; les requêtes dépassant un quota sont refusées jusqu'à sa réinitialisation, au lieu d'entraîner une facturation automatique.
+
+### 5. Hors-ligne et synchronisation
+
+- La persistance locale est activée dans `src/lib/firebase.ts` avec `persistentLocalCache` et `persistentMultipleTabManager`.
+- Les écritures hors ligne sont mises en attente et synchronisées automatiquement au retour du réseau.
+- Le cache local n'est pas chiffré par l'application : déconseiller son usage sur un appareil partagé.
+
+### 6. Authentification
+
+- Utiliser Google et l'email/mot de passe via Firebase Auth.
+- Utiliser `signInWithPopup` sur ordinateur et `signInWithRedirect` sur mobile ou dans la PWA installée.
+- Attendre `onAuthStateChanged` avant d'afficher l'application et présenter un écran de chargement pendant cette attente.
+- Ajouter le domaine de production (`*.pages.dev` ou le domaine personnalisé) à la liste des domaines autorisés.
+
+### 7. Règles de sécurité Firestore
+
+Règles actuellement présentes dans `firestore.rules` :
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+
+Exemple de validation à adapter au modèle réel :
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validTask(t) {
+      return t.title is string
+        && t.title.size() > 0 && t.title.size() <= 200
+        && t.status in ['active', 'done']
+        && t.priority in [1, 2, 3, 4];
+    }
+
+    match /users/{uid}/tasks/{taskId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validTask(request.resource.data);
+      allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/{document=**} {
+      allow read, write: if isOwner(uid);
+    }
+  }
+}
+```
+
+Cet exemple de validation est à adapter au modèle réel. Valider les règles avec l'outil de validation du serveur MCP Firebase s'il est disponible, puis les tester avec l'émulateur avant tout déploiement. Ne jamais utiliser `allow read, write: if true`, même temporairement. La règle générale sur `users/{uid}/{document=**}` donne aussi accès aux autres sous-collections ; pour imposer la validation à toutes les écritures de tâches, supprimer cette règle générique ou la restreindre aux autres collections afin qu'elle ne contourne pas la validation spécifique.
+
+### 8. Développement local
+
+- Démarrer les émulateurs Auth et Firestore avec `npm run emulators`.
+- Ne jamais pointer l'environnement de développement vers les données réelles.
+- Versionner `firestore.rules`, `firestore.indexes.json` et `firebase.json`.
+
+### 9. Sauvegarde et sécurité des données
+
+- Le plan Spark ne fournit pas de sauvegardes automatiques : l'export JSON de l'application est la sauvegarde. Recommander un export régulier.
+- Activer App Check lorsque l'application sera stable.
+
+### 10. Checklist avant chaque pull request
+
+- [ ] Aucun service interdit utilisé (Functions, Storage, Hosting)
+- [ ] Aucune clé ou aucun ID de projet codé en dur
+- [ ] Requêtes avec `limit()` et index déclarés si nécessaire
+- [ ] Règles de sécurité validées et testées dans l'émulateur
+- [ ] Pas de suppression définitive immédiate (`deletedAt`)
+- [ ] Testé hors ligne puis après le retour en ligne
+- [ ] Aucun fichier `.env` ni secret dans le commit

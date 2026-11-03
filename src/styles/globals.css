@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; margin: 0; }
+body { min-width: 320px; background: var(--color-background); color: var(--color-text); }
+button, a { font: inherit; }
+.app-shell { min-height: 100vh; padding: 32px 24px 112px; }
+.page-content { max-width: 720px; margin: 0 auto; }
+.page-content h1 { font-size: 1.75rem; }
+.floating-nav { position: fixed; z-index: 2; right: 16px; bottom: 16px; left: 16px; display: flex; justify-content: space-around; max-width: 640px; min-height: 56px; margin: 0 auto; padding: 8px; border-radius: var(--radius-pill); background: var(--color-surface); box-shadow: var(--shadow-raised); }
+.floating-nav a { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: var(--radius-pill); color: var(--color-text-secondary); text-decoration: none; }
+.floating-nav a[aria-current='page'] { color: var(--color-text); box-shadow: var(--shadow-inset); }
+.placeholder-button, .placeholder-card, .placeholder-chip { border: 0; border-radius: var(--radius-pill); background: var(--color-card); color: var(--color-text); box-shadow: var(--shadow-raised); padding: 12px 20px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 120ms !important; animation-iteration-count: 1 !important; transition-duration: 120ms !important; scroll-behavior: auto !important; } }
