@@ -7,7 +7,7 @@ export type AuthErrorCode =
   | 'offline'
   | 'networkUnavailable'
   | 'popupBlocked'
-  | 'emailAlreadyInUse'
+  | 'pendingWrites'
   | 'unknown';
 
 export interface AuthContextValue {

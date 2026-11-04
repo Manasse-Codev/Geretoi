@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase/firestore';
+import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { FirestoreDataConverter, QueryDocumentSnapshot, SnapshotOptions, WithFieldValue } from 'firebase/firestore';
 import type { Tag } from '@/types/models';
 
@@ -12,8 +12,8 @@ export const tagConverter: FirestoreDataConverter<Tag, TagDocument> = {
     void id;
     return {
       ...fields,
-      createdAt: fields.createdAt instanceof Date ? Timestamp.fromDate(fields.createdAt) : fields.createdAt,
-      updatedAt: fields.updatedAt instanceof Date ? Timestamp.fromDate(fields.updatedAt) : fields.updatedAt,
+      createdAt: fields.createdAt instanceof Date ? serverTimestamp() : fields.createdAt,
+      updatedAt: fields.updatedAt instanceof Date ? serverTimestamp() : fields.updatedAt,
     } as WithFieldValue<TagDocument>;
   },
   fromFirestore(snapshot: QueryDocumentSnapshot, options: SnapshotOptions): Tag {

@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import type { CollectionReference, QuerySnapshot } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
 import { shareSubscription } from '@/lib/sharedSubscription';
@@ -31,18 +31,18 @@ export async function createList(uid: string, input: ListInput, now = new Date()
   return list;
 }
 
-export async function renameList(uid: string, id: string, name: string, now = new Date()): Promise<void> {
-  await updateDoc(doc(getListsCollection(uid), id), { name: name.trim(), updatedAt: now });
+export async function renameList(uid: string, id: string, name: string): Promise<void> {
+  await updateDoc(doc(getListsCollection(uid), id), { name: name.trim(), updatedAt: serverTimestamp() });
 }
 
-export async function updateList(uid: string, id: string, changes: Pick<ListInput, 'name' | 'color' | 'icon'>, now = new Date()): Promise<void> {
+export async function updateList(uid: string, id: string, changes: Pick<ListInput, 'name' | 'color' | 'icon'>): Promise<void> {
   const fields = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
-  await updateDoc(doc(getListsCollection(uid), id), { ...fields, updatedAt: now });
+  await updateDoc(doc(getListsCollection(uid), id), { ...fields, updatedAt: serverTimestamp() });
 }
 
-export async function reorderLists(uid: string, order: Array<{ id: string; order: number }>, now = new Date()): Promise<void> {
+export async function reorderLists(uid: string, order: Array<{ id: string; order: number }>): Promise<void> {
   const batch = writeBatch(firestore);
-  for (const item of order) batch.update(doc(getListsCollection(uid), item.id), { order: item.order, updatedAt: now });
+  for (const item of order) batch.update(doc(getListsCollection(uid), item.id), { order: item.order, updatedAt: serverTimestamp() });
   await batch.commit();
 }
 

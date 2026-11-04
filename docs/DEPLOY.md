@@ -10,6 +10,7 @@ DayFlow se construit comme application Vite statique (`npm run build`, sortie `d
 - En production, les émulateurs ne sont jamais utilisés, même avec `VITE_USE_EMULATORS=true`. Si une variable requise manque, l'application affiche les seuls noms des variables à configurer.
 - Vercel lit `vercel.json` et ignore `public/_redirects`/`public/_headers`. Cloudflare Pages lit les deux fichiers dans `public/` et ignore `vercel.json`. Les fichiers statiques existants gardent la priorité sur le repli SPA afin que `sw.js`, le manifeste et les icônes restent de vrais fichiers.
 - Le Workbox `navigateFallback: '/index.html'` dans `vite.config.ts` couvre la navigation hors ligne. `index.html`, `sw.js`, les scripts Workbox et `manifest.webmanifest` ont une politique `max-age=0, must-revalidate` sur chaque hôte : le HTML et le worker sont revalidés et la bannière de nouvelle version peut détecter les mises à jour. Les ressources fingerprintées peuvent être mises en cache par URL.
+- Le test hors-ligne doit se faire sur le build compilé (`npm run build`, puis `npm run preview`) afin de vérifier le précache des routes différées. En développement, les fichiers de route ne sont pas précachés ; utilisez `VITE_ENABLE_SW_DEV=true` uniquement pour tester explicitement l'enregistrement du service worker. Le précache ne contient que les fichiers statiques de l'application, jamais les données authentifiées ou personnelles.
 
 ## Vercel
 

@@ -1,44 +1,65 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import type { ReactNode } from 'react';
-import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { AuthGate } from '@/app/AuthGate';
 import { RouteLoading } from '@/app/RouteLoading';
-const AppLayout = lazy(() => import('@/app/layout/AppLayout').then((module) => ({ default: module.AppLayout })));
-const LoginPage = lazy(() => import('@/features/auth/LoginPage').then((module) => ({ default: module.LoginPage })));
-const TodayPage = lazy(() => import('@/features/today/TodayPage').then((module) => ({ default: module.TodayPage })));
-const TaskFormPage = lazy(() => import('@/features/tasks/TaskFormPage').then((module) => ({ default: module.TaskFormPage })));
-const PlannerPage = lazy(() => import('@/features/planner/PlannerPage').then((module) => ({ default: module.PlannerPage })));
-const ListsPage = lazy(() => import('@/features/lists/ListsPage').then((module) => ({ default: module.ListsPage })));
-const HistoryPage = lazy(() => import('@/features/history/HistoryPage').then((module) => ({ default: module.HistoryPage })));
-const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage })));
-const AccountDeletionPage = lazy(() => import('@/features/settings/SettingsPage').then((module) => ({ default: module.AccountDeletionPage })));
-const StatsPage = lazy(() => import('@/features/stats/StatsPage').then((module) => ({ default: module.StatsPage })));
+import { RouteErrorBoundary, RouteNotFound } from '@/app/RouteErrorBoundary';
+import { lazyWithRetry, preloadRouteModules } from '@/lib/lazyWithRetry';
+
+const loadAppLayout = () => import('@/app/layout/AppLayout').then((module) => ({ default: module.AppLayout }));
+const loadLoginPage = () => import('@/features/auth/LoginPage').then((module) => ({ default: module.LoginPage }));
+const loadTodayPage = () => import('@/features/today/TodayPage').then((module) => ({ default: module.TodayPage }));
+const loadTaskFormPage = () => import('@/features/tasks/TaskFormPage').then((module) => ({ default: module.TaskFormPage }));
+const loadPlannerPage = () => import('@/features/planner/PlannerPage').then((module) => ({ default: module.PlannerPage }));
+const loadListsPage = () => import('@/features/lists/ListsPage').then((module) => ({ default: module.ListsPage }));
+const loadHistoryPage = () => import('@/features/history/HistoryPage').then((module) => ({ default: module.HistoryPage }));
+const loadSettingsPage = () => import('@/features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage }));
+const loadAccountDeletionPage = () => import('@/features/settings/SettingsPage').then((module) => ({ default: module.AccountDeletionPage }));
+const loadStatsPage = () => import('@/features/stats/StatsPage').then((module) => ({ default: module.StatsPage }));
+const loadDesignGallery = () => import('@/app/DesignGallery').then((module) => ({ default: module.DesignGallery }));
+
+const AppLayout = lazyWithRetry(loadAppLayout);
+const LoginPage = lazyWithRetry(loadLoginPage);
+const TodayPage = lazyWithRetry(loadTodayPage);
+const TaskFormPage = lazyWithRetry(loadTaskFormPage);
+const PlannerPage = lazyWithRetry(loadPlannerPage);
+const ListsPage = lazyWithRetry(loadListsPage);
+const HistoryPage = lazyWithRetry(loadHistoryPage);
+const SettingsPage = lazyWithRetry(loadSettingsPage);
+const AccountDeletionPage = lazyWithRetry(loadAccountDeletionPage);
+const StatsPage = lazyWithRetry(loadStatsPage);
+const DesignGallery = lazyWithRetry(loadDesignGallery);
 
 function suspended(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
 const routes: RouteObject[] = [
-  { path: '/login', element: <AuthGate mode="guest">{suspended(<LoginPage />)}</AuthGate> },
+  { path: '/login', element: <AuthGate mode="guest">{suspended(<LoginPage />)}</AuthGate>, errorElement: <RouteErrorBoundary /> },
   {
     element: <AuthGate>{suspended(<AppLayout />)}</AuthGate>,
+    errorElement: <RouteErrorBoundary />,
     children: [
-      { path: '/', element: suspended(<TodayPage />) },
-      { path: '/planner', element: suspended(<PlannerPage />) },
-      { path: '/lists', element: suspended(<ListsPage />) },
-      { path: '/stats', element: suspended(<StatsPage />) },
-      { path: '/history', element: suspended(<HistoryPage />) },
-      { path: '/trash', element: suspended(<HistoryPage trashOnly />) },
-      { path: '/settings', element: suspended(<SettingsPage />) },
-      { path: '/settings/delete-account', element: suspended(<AccountDeletionPage />) },
-      { path: '/new', element: suspended(<TaskFormPage />) },
-      { path: '*', element: <Navigate replace to="/" /> },
+      { path: '/', element: suspended(<TodayPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '/planner', element: suspended(<PlannerPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '/lists', element: suspended(<ListsPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '/stats', element: suspended(<StatsPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '/history', element: suspended(<HistoryPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '/trash', element: suspended(<HistoryPage trashOnly />), errorElement: <RouteErrorBoundary /> },
+      { path: '/settings', element: suspended(<SettingsPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '/settings/delete-account', element: suspended(<AccountDeletionPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '/new', element: suspended(<TaskFormPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '*', element: <RouteNotFound />, errorElement: <RouteErrorBoundary /> },
     ],
   },
 ];
 
 if (import.meta.env.DEV) {
-  routes.push({ path: '/design', lazy: async () => { const module = await import('@/app/DesignGallery'); return { Component: module.DesignGallery }; } });
+  routes.push({ path: '/design', element: suspended(<DesignGallery />), errorElement: <RouteErrorBoundary /> });
 }
 
 export const router = createBrowserRouter(routes);
+
+export function preloadPrimaryRoutes() {
+  return preloadRouteModules([loadTaskFormPage, loadPlannerPage, loadListsPage, loadStatsPage, loadHistoryPage, loadSettingsPage]);
+}

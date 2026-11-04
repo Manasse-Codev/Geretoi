@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCsv, buildTaskRows, buildXlsxBuffer, escapeSpreadsheetText, EXPORT_TASK_HEADERS } from './exportData';
+import { buildCsv, buildTaskRows, buildXlsxBuffer, escapeIcs, escapeSpreadsheetText, EXPORT_TASK_HEADERS } from './exportData';
 import type { ExportData } from './exportData';
 
 const date = new Date('2026-01-02T03:04:05.000Z');
@@ -28,6 +28,10 @@ describe('export de données', () => {
     for (const value of ['=x', '+x', '-x', '@x', '\tx', '\rx']) expect(escapeSpreadsheetText(value)).toBe(`'${value}`);
     expect(escapeSpreadsheetText('Équipe')).toBe('Équipe');
     expect(buildCsv(data)).toContain(`"'=formule"`);
+  });
+
+  it('neutralise les retours chariot et les sauts de ligne dans les propriétés calendrier', () => {
+    expect(escapeIcs('Résumé\r\nBEGIN:VEVENT\rFIN')).toBe('Résumé\\nBEGIN:VEVENT\\nFIN');
   });
 
   it('produit un CSV UTF-8 BOM séparé par des points-virgules', () => {

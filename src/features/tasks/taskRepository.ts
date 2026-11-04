@@ -1,8 +1,8 @@
 import {
-  collection, deleteDoc, doc, getAggregateFromServer, getCountFromServer, getDoc, getDocs, getDocsFromServer, limit, onSnapshot, orderBy, query,
-  startAfter, sum, Timestamp, updateDoc, where, writeBatch,
+  collection, deleteDoc, doc, getDoc, getDocs, getDocsFromServer, limit, onSnapshot, orderBy, query,
+  serverTimestamp, startAfter, Timestamp, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
-import type { CollectionReference, QueryDocumentSnapshot, QuerySnapshot } from 'firebase/firestore';
+import type { CollectionReference, Query, QueryDocumentSnapshot, QuerySnapshot } from 'firebase/firestore';
 import { addDays, endOfDay } from 'date-fns';
 import { firestore } from '@/lib/firestore';
 import { clearSyncError, settleWrite } from '@/lib/syncStatus';
@@ -23,7 +23,6 @@ export interface HistoryPage { tasks: Task[]; cursor: QueryDocumentSnapshot<Task
 export interface TrashPage { tasks: Task[]; cursor: QueryDocumentSnapshot<Task> | null; hasMore: boolean; sync: SyncMetadata }
 export interface StatsTasksResult { tasks: Task[]; completedCount: number; estimatedMinutes: number; dailyCounts: number[] }
 const STATS_DETAIL_LIMIT = 5;
-const STATS_COUNT_CONCURRENCY = 5;
 
 export function getTasksCollection(uid: string): CollectionReference<Task> {
   return collection(firestore, 'users', uid, 'tasks').withConverter(taskConverter);
@@ -98,32 +97,35 @@ export async function createTask(uid: string, input: TaskInput, now = new Date()
   return task;
 }
 
-async function updateTaskFields(uid: string, taskId: string, changes: Partial<Task>, now: Date, waitForServer = true): Promise<void> {
+async function updateTaskFields(uid: string, taskId: string, changes: Partial<Task>, waitForServer = true): Promise<void> {
   const safeChanges = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined)) as Partial<Task>;
   delete safeChanges.id;
   delete safeChanges.createdAt;
   delete safeChanges.updatedAt;
-  await settleWrite(updateDoc(doc(getTasksCollection(uid), taskId), { ...safeChanges, updatedAt: now }), waitForServer);
+  await settleWrite(updateDoc(doc(getTasksCollection(uid), taskId), { ...safeChanges, updatedAt: serverTimestamp() }), waitForServer);
 }
 
 export function updateTask(uid: string, taskId: string, changes: TaskUpdate, now = new Date(), waitForServer = true): Promise<void> {
-  return updateTaskFields(uid, taskId, changes, now, waitForServer);
+  void now;
+  return updateTaskFields(uid, taskId, changes, waitForServer);
 }
 
 export function completeTask(uid: string, taskId: string, now = new Date(), waitForServer = true): Promise<void> {
-  return updateTaskFields(uid, taskId, { status: 'done', completedAt: now }, now, waitForServer);
+  return updateTaskFields(uid, taskId, { status: 'done', completedAt: now }, waitForServer);
 }
 
 export function reopenTask(uid: string, taskId: string, now = new Date(), waitForServer = true): Promise<void> {
-  return updateTaskFields(uid, taskId, { status: 'active', completedAt: null }, now, waitForServer);
+  void now;
+  return updateTaskFields(uid, taskId, { status: 'active', completedAt: null }, waitForServer);
 }
 
 export function softDeleteTask(uid: string, taskId: string, now = new Date(), waitForServer = true): Promise<void> {
-  return updateTaskFields(uid, taskId, { deletedAt: now }, now, waitForServer);
+  return updateTaskFields(uid, taskId, { deletedAt: now }, waitForServer);
 }
 
 export function restoreTask(uid: string, taskId: string, now = new Date(), waitForServer = true): Promise<void> {
-  return updateTaskFields(uid, taskId, { deletedAt: null }, now, waitForServer);
+  void now;
+  return updateTaskFields(uid, taskId, { deletedAt: null }, waitForServer);
 }
 
 export async function permanentlyDeleteTask(uid: string, taskId: string, now = new Date()): Promise<void> {
@@ -167,41 +169,44 @@ export async function getHistoryPage(uid: string, cursor: QueryDocumentSnapshot<
 
 export async function getCompletedTasksInPeriod(uid: string, start: Date, end: Date, dayCount: 7 | 30): Promise<StatsTasksResult> {
   const tasks = getTasksCollection(uid);
-  const periodQuery = query(
-    tasks,
-    where('status', '==', 'done'),
-    where('deletedAt', '==', null),
-    where('completedAt', '>=', start),
-    where('completedAt', '<=', end),
-  );
-  const detailQuery = query(
-    tasks,
-    where('status', '==', 'done'),
-    where('deletedAt', '==', null),
-    where('completedAt', '>=', start),
-    where('completedAt', '<=', end),
-    orderBy('completedAt', 'desc'),
-    limit(STATS_DETAIL_LIMIT),
-  );
-  const [countSnapshot, sumSnapshot, detailsSnapshot] = await Promise.all([
-    getCountFromServer(periodQuery),
-    getAggregateFromServer(periodQuery, { estimatedMinutes: sum('estimatedMinutes') }),
-    getDocsFromServer(detailQuery),
-  ]);
-  const dayQueries = Array.from({ length: dayCount }, (_, index) => {
+  const days = Array.from({ length: dayCount }, (_, index) => {
     const dayStart = addDays(start, index);
-    const dayEnd = new Date(Math.min(endOfDay(dayStart).getTime(), end.getTime()));
-    return query(tasks, where('status', '==', 'done'), where('deletedAt', '==', null), where('completedAt', '>=', dayStart), where('completedAt', '<=', dayEnd));
+    return { start: dayStart, end: new Date(Math.min(endOfDay(dayStart).getTime(), end.getTime())) };
   });
-  const dailyCounts: number[] = [];
-  for (let index = 0; index < dayQueries.length; index += STATS_COUNT_CONCURRENCY) {
-    const batch = dayQueries.slice(index, index + STATS_COUNT_CONCURRENCY);
-    dailyCounts.push(...(await Promise.all(batch.map(async (dayQuery) => (await getCountFromServer(dayQuery)).data().count))));
+  const dailyCounts = days.map(() => 0);
+  let completedCount = 0;
+  let estimatedMinutes = 0;
+  const recentTasks: Task[] = [];
+  let cursor: QueryDocumentSnapshot<Task> | null = null;
+  while (true) {
+    const constraints = [
+      where('status', '==', 'done'),
+      where('deletedAt', '==', null),
+      where('completedAt', '>=', start),
+      where('completedAt', '<=', end),
+      orderBy('completedAt', 'desc'),
+    ];
+    const page: Query<Task> = cursor
+      ? query(tasks, ...constraints, startAfter(cursor), limit(TASK_QUERY_LIMIT))
+      : query(tasks, ...constraints, limit(TASK_QUERY_LIMIT));
+    const snapshot = await getDocsFromServer(page);
+    for (const document of snapshot.docs) {
+      const task = document.data();
+      completedCount += 1;
+      estimatedMinutes += task.estimatedMinutes ?? 0;
+      if (recentTasks.length < STATS_DETAIL_LIMIT) recentTasks.push(task);
+      const completedAt = task.completedAt?.getTime();
+      const dayIndex = completedAt === undefined ? -1 : days.findIndex((day) => completedAt >= day.start.getTime() && completedAt <= day.end.getTime());
+      if (dayIndex >= 0) dailyCounts[dayIndex] = (dailyCounts[dayIndex] ?? 0) + 1;
+    }
+    if (snapshot.size < TASK_QUERY_LIMIT) break;
+    cursor = snapshot.docs.at(-1) ?? null;
+    if (!cursor) break;
   }
   return {
-    tasks: detailsSnapshot.docs.map((item) => item.data()),
-    completedCount: countSnapshot.data().count,
-    estimatedMinutes: sumSnapshot.data().estimatedMinutes ?? 0,
+    tasks: recentTasks,
+    completedCount,
+    estimatedMinutes,
     dailyCounts,
   };
 }

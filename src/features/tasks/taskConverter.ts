@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase/firestore';
+import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { FirestoreDataConverter, QueryDocumentSnapshot, SnapshotOptions, WithFieldValue } from 'firebase/firestore';
 import type { Recurrence, Reminder, Subtask, Task, TaskPriority, TaskStatus } from '@/types/models';
 
@@ -90,8 +90,8 @@ export const taskConverter: FirestoreDataConverter<Task, TaskDocument> = {
       completedAt: timestamp(fields.completedAt),
       deletedAt: timestamp(fields.deletedAt),
       dueDate: timestamp(fields.dueDate),
-      createdAt: timestamp(fields.createdAt),
-      updatedAt: timestamp(fields.updatedAt),
+      createdAt: fields.createdAt instanceof Date ? serverTimestamp() : fields.createdAt,
+      updatedAt: fields.updatedAt instanceof Date ? serverTimestamp() : fields.updatedAt,
       reminders: Array.isArray(reminders)
         ? reminders.map((reminder) => {
           const fields = reminder as { at?: unknown };

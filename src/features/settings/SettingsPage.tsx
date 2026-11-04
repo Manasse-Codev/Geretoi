@@ -12,7 +12,7 @@ import { usePreferences } from '@/features/settings/usePreferences';
 import { fr } from '@/i18n/fr';
 
 export function SettingsPage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, errorMessage: authErrorMessage } = useAuth();
   const navigate = useNavigate();
   const { preferences, update } = usePreferences();
   const [toast, setToast] = useState('');
@@ -90,7 +90,7 @@ export function SettingsPage() {
       <button className="settings-row settings-row--button" onClick={() => navigate('/trash')} type="button"><span><Trash2 size={17} />{fr.settingsPage.trash}</span><span>{fr.settingsPage.retention30}<ArrowRight size={16} /></span></button>
     </SettingsSection>
     <div className="sensitive-actions"><Button onClick={() => void signOut()} variant="secondary"><LogOut size={17} />{fr.settingsPage.signOut}</Button></div>
-    {error && <p className="inline-error" role="alert">{error}</p>}
+    {(error || authErrorMessage) && <p className="inline-error" role="alert">{error || authErrorMessage}</p>}
     {toast && <Toast message={toast} onDismiss={() => setToast('')} onUndo={() => setToast('')} />}
   </div>;
 }

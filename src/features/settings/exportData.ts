@@ -186,7 +186,7 @@ export async function downloadXlsx(name: string, data: ExportData) {
   downloadBlob(name, new Blob([await buildXlsxBuffer(data)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
 }
 
-const escapeIcs = (value: string) => value.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n');
+export const escapeIcs = (value: string) => value.replace(/\\/g, '\\\\').replace(/\r\n|\r|\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
 
 export function downloadCalendar(tasks: Task[]) {
   const events = tasks.filter((task) => task.status === 'active' && task.deletedAt === null && task.dueDate).map((task) => {

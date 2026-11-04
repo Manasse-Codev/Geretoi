@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PwaRuntime } from './PwaRuntime';
 import { setUnsavedChanges } from '@/lib/unsavedChanges';
+import { fr } from '@/i18n/fr';
 
 const { registerMock } = vi.hoisted(() => ({ registerMock: vi.fn() }));
 vi.mock('@/lib/pwaRegistration', () => ({ registerSW: registerMock }));
@@ -24,17 +25,17 @@ describe('PwaRuntime', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     render(<PwaRuntime />);
-    expect(screen.queryByText('Une nouvelle version est prête.')).toBeNull();
+    expect(screen.queryByText(fr.pwa.bannerTitle)).toBeNull();
     act(() => notifyUpdate());
-    expect(screen.getByText('Une nouvelle version est prête.')).toBeTruthy();
+    expect(screen.getByText(fr.pwa.bannerTitle)).toBeTruthy();
 
     setUnsavedChanges(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Mettre à jour' }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(fr.pwa.updateNow) }));
     expect(window.confirm).toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
 
     vi.mocked(window.confirm).mockReturnValue(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Mettre à jour' }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(fr.pwa.updateNow) }));
     expect(update).toHaveBeenCalledWith(true);
   });
 });

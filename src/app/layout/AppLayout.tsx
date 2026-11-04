@@ -8,10 +8,12 @@ import { Logo } from '@/components/Logo';
 import { RetryNotice } from '@/components/RetryNotice';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { usePreferences } from '@/features/settings/usePreferences';
+import { useAuth } from '@/features/auth/useAuth';
+import { preloadPrimaryRoutes } from '@/app/router';
 import { fr } from '@/i18n/fr';
 
 export function AppLayout() {
-  const location = useLocation(); const navigate = useNavigate(); const { preferences, update, error: preferencesError, retry: retryPreferences, loading: preferencesLoading } = usePreferences();
+  const location = useLocation(); const navigate = useNavigate(); const { user } = useAuth(); const { preferences, update, error: preferencesError, retry: retryPreferences, loading: preferencesLoading } = usePreferences();
   const isTaskForm = location.pathname === '/new';
   const prefersReducedMotion = useReducedMotion() ?? false;
   const addButtonRef = useRef<HTMLButtonElement>(null);
@@ -30,6 +32,19 @@ export function AppLayout() {
     if (previousPath.current === '/new' && location.pathname !== '/new') addButtonRef.current?.focus();
     previousPath.current = location.pathname;
   }, [location.pathname]);
+  useEffect(() => {
+    if (!user) return;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string; downlink?: number } }).connection;
+    if (connection?.saveData || connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g' || (connection?.downlink !== undefined && connection.downlink < 0.5)) return;
+    const hasIdleCallback = 'requestIdleCallback' in window;
+    const idle = hasIdleCallback
+      ? window.requestIdleCallback(() => { void preloadPrimaryRoutes(); })
+      : window.setTimeout(() => { void preloadPrimaryRoutes(); }, 1200);
+    return () => {
+      if (hasIdleCallback) window.cancelIdleCallback?.(idle as number);
+      else window.clearTimeout(idle as number);
+    };
+  }, [user]);
   const active: BottomNavTab = location.pathname.startsWith('/planner') ? 'planner' : location.pathname.startsWith('/lists') ? 'lists' : location.pathname.startsWith('/stats') || location.pathname.startsWith('/history') || location.pathname.startsWith('/trash') ? 'stats' : 'today';
   const toggleTheme = () => void update({ theme: preferences.theme === 'dark' ? 'light' : 'dark' }).catch(() => undefined);
 

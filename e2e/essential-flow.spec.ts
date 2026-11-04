@@ -33,6 +33,12 @@ test('crée et termine une tâche, puis synchronise une création hors ligne', a
   await page.getByRole('checkbox', { name: `Terminer : ${onlineTitle}` }).click();
   await expect(page.getByText('Tâche terminée')).toBeVisible();
 
+  // Load the settings route while online; this development-server test has no service worker.
+  await page.getByRole('button', { name: 'Réglages', exact: true }).click();
+  await expect(page.getByRole('button', { name: fr.settingsPage.signOut, exact: true })).toBeVisible();
+  await page.getByRole('button', { name: fr.navigation.today, exact: true }).click();
+  await expect(page.getByRole('heading', { name: "Aujourd'hui" })).toBeVisible();
+
   await context.setOffline(true);
   await expect(page.getByRole('status', { name: 'Hors ligne' })).toBeVisible();
   await page.getByRole('button', { name: fr.design.bottomNav.add, exact: true }).click();
@@ -40,11 +46,29 @@ test('crée et termine une tâche, puis synchronise une création hors ligne', a
   await page.locator('.form-submit').click();
   await expect(page.getByRole('heading', { name: offlineTitle })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Réglages', exact: true }).click();
+  await page.getByRole('button', { name: fr.settingsPage.signOut, exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText(fr.auth.errors.pendingWrites, { timeout: 15000 });
+  await expect(page).not.toHaveURL(/\/login$/);
+
   await context.setOffline(false);
   await expect(page.getByRole('status', { name: 'Synchronisé' })).toBeVisible({ timeout: 30000 });
+  await page.getByRole('button', { name: fr.navigation.today, exact: true }).click();
   await page.waitForTimeout(600);
   await page.reload();
   await expect(page.getByRole('heading', { name: offlineTitle })).toBeVisible();
+});
+
+test('attend les écritures puis efface le cache Firestore avant la déconnexion', async ({ page }) => {
+  await createAccount(page);
+  await page.getByRole('button', { name: 'Réglages', exact: true }).click();
+  await page.getByRole('button', { name: fr.settingsPage.signOut, exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('heading', { name: 'Connectez-vous à votre espace' })).toBeVisible();
+  await expect.poll(() => page.evaluate(async () => {
+    const databases = await indexedDB.databases();
+    return databases.some((database) => database.name?.includes('firestore'));
+  })).toBe(false);
 });
 
 test('le service worker de développement suit le réglage explicite', async ({ page }) => {

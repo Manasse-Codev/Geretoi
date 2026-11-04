@@ -6,7 +6,9 @@ import {
   signInWithRedirect,
   signOut,
 } from 'firebase/auth';
+import { clearIndexedDbPersistence, terminate, waitForPendingWrites } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
+import { firestore } from '@/lib/firestore';
 
 const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i;
 
@@ -34,5 +36,40 @@ export function signInWithGoogle(): Promise<void> {
 }
 
 export function signOutCurrentUser(): Promise<void> {
-  return signOut(auth);
+  return signOutSafely();
+}
+
+export class PendingWritesError extends Error {
+  constructor() {
+    super('pending-writes');
+    this.name = 'PendingWritesError';
+  }
+}
+
+async function signOutSafely(): Promise<void> {
+  let timeout: number | undefined;
+  try {
+    await Promise.race([
+      waitForPendingWrites(firestore),
+      new Promise<never>((_resolve, reject) => {
+        timeout = window.setTimeout(() => reject(new PendingWritesError()), 10_000);
+      }),
+    ]);
+  } catch {
+    throw new PendingWritesError();
+  } finally {
+    if (timeout !== undefined) window.clearTimeout(timeout);
+  }
+
+  try {
+    await terminate(firestore);
+    await clearIndexedDbPersistence(firestore);
+  } catch {
+    // Reinitializing the Firebase singleton requires a fresh document context.
+    window.location.reload();
+    throw new Error('local-data-cleanup-failed');
+  }
+
+  await signOut(auth);
+  window.location.replace('/login');
 }

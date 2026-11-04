@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import type { CollectionReference, QuerySnapshot } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
 import { shareSubscription } from '@/lib/sharedSubscription';
@@ -31,18 +31,18 @@ export async function createTag(uid: string, input: TagInput, now = new Date()):
   return tag;
 }
 
-export async function renameTag(uid: string, id: string, name: string, now = new Date()): Promise<void> {
-  await updateDoc(doc(getTagsCollection(uid), id), { name: name.trim(), updatedAt: now });
+export async function renameTag(uid: string, id: string, name: string): Promise<void> {
+  await updateDoc(doc(getTagsCollection(uid), id), { name: name.trim(), updatedAt: serverTimestamp() });
 }
 
-export async function updateTag(uid: string, id: string, changes: TagInput, now = new Date()): Promise<void> {
+export async function updateTag(uid: string, id: string, changes: TagInput): Promise<void> {
   const fields = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
-  await updateDoc(doc(getTagsCollection(uid), id), { ...fields, updatedAt: now });
+  await updateDoc(doc(getTagsCollection(uid), id), { ...fields, updatedAt: serverTimestamp() });
 }
 
-export async function reorderTags(uid: string, order: Array<{ id: string; order: number }>, now = new Date()): Promise<void> {
+export async function reorderTags(uid: string, order: Array<{ id: string; order: number }>): Promise<void> {
   const batch = writeBatch(firestore);
-  for (const item of order) batch.update(doc(getTagsCollection(uid), item.id), { order: item.order, updatedAt: now });
+  for (const item of order) batch.update(doc(getTagsCollection(uid), item.id), { order: item.order, updatedAt: serverTimestamp() });
   await batch.commit();
 }
 

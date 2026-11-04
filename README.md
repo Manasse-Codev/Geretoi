@@ -264,7 +264,7 @@ VITE_FIREBASE_APP_ID=...
 npm run dev
 ```
 
-Le service worker est désactivé par défaut en développement. Pour tester son enregistrement et la bannière de mise à jour, définissez `VITE_ENABLE_SW_DEV=true` dans `.env.local`, puis redémarrez Vite. Gardez cette valeur à `false` ou retirez-la pour le développement courant.
+Le service worker est désactivé par défaut en développement et les fichiers des routes ne sont alors pas mis en cache. Pour tester réellement le hors-ligne, construisez puis servez la version compilée avec `npm run build && npm run preview`. En développement, définissez plutôt `VITE_ENABLE_SW_DEV=true` dans `.env.local`, puis redémarrez Vite pour tester le service worker ; les données personnelles ne sont jamais précachées. Gardez cette valeur à `false` ou retirez-la pour le développement courant.
 
 ### Build de production
 
@@ -322,6 +322,8 @@ Le dépôt est prévu pour être déployé en parallèle sur Vercel Hobby (usage
 ## 🔒 Confidentialité
 
 Les données sont stockées dans votre projet Firestore personnel, rattachées à votre compte, et protégées par des règles de sécurité : chaque utilisateur n'accède qu'à ses propres données. Une copie locale est conservée dans le navigateur pour le fonctionnement hors-ligne (non chiffrée par l'application : évitez de vous connecter depuis un appareil partagé). Aucune donnée n'est partagée avec des tiers.
+
+Les deux hébergeurs appliquent des en-têtes de sécurité depuis `vercel.json` et `public/_headers`. Après toute modification de `firestore.rules`, exécutez `npm run test:rules` uniquement sur l'émulateur local. Les exigences de divulgation et le périmètre figurent dans [SECURITY.md](SECURITY.md) ; le rapport détaillé est dans [docs/SECURITY.md](docs/SECURITY.md).
 
 ---
 
@@ -389,145 +391,9 @@ MIT — libre d'utilisation et de modification.
 
 ### 7. Règles de sécurité Firestore
 
-Règles actuellement présentes dans `firestore.rules` :
+Les règles normatives sont dans [`firestore.rules`](firestore.rules). Elles limitent les chemins au propriétaire, valident les champs et horodatages, bornent les requêtes de liste à 500 documents et refusent l’accès sans règle correspondante. Les limites des champs imbriqués sont décrites dans [docs/SECURITY.md](docs/SECURITY.md).
 
-Elles remplacent l'ancien extrait simplifié sous « Modèle de données Firestore » ; ce dernier est conservé comme présentation historique et n'est pas la source normative.
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function isOwner(uid) {
-      return request.auth != null && request.auth.uid == uid;
-    }
-
-    function validList(list) {
-      return list is map &&
-        list.keys().hasOnly(['name', 'color', 'icon', 'order', 'createdAt', 'updatedAt']) &&
-        list.keys().hasAll(['name']) &&
-        list.name is string && list.name.size() >= 1 && list.name.size() <= 80 &&
-        optionalString(list, 'color', 32) &&
-        optionalString(list, 'icon', 64) &&
-        (!('order' in list) || (list.order is int && list.order >= 0 && list.order <= 10000)) &&
-        optionalTimestamp(list, 'createdAt') &&
-        optionalTimestamp(list, 'updatedAt');
-    }
-
-    function validTag(tag) {
-      return tag is map &&
-        tag.keys().hasOnly(['name', 'color', 'order', 'createdAt', 'updatedAt']) &&
-        tag.keys().hasAll(['name']) &&
-        tag.name is string && tag.name.size() >= 1 && tag.name.size() <= 80 &&
-        optionalString(tag, 'color', 32) &&
-        (!('order' in tag) || (tag.order is int && tag.order >= 0 && tag.order <= 10000)) &&
-        optionalTimestamp(tag, 'createdAt') &&
-        optionalTimestamp(tag, 'updatedAt');
-    }
-
-    function hasOnlyTaskFields(task) {
-      return task.keys().hasOnly([
-        'title', 'description', 'status', 'completedAt', 'deletedAt', 'dueDate',
-        'priority', 'startTime', 'estimatedMinutes', 'listId', 'tags', 'links',
-        'subtasks', 'recurrence', 'reminders', 'createdAt', 'updatedAt'
-      ]);
-    }
-
-    function optionalTimestamp(task, field) {
-      return !(field in task) || task[field] == null || task[field] is timestamp;
-    }
-
-    function optionalString(task, field, maxLength) {
-      return !(field in task) || task[field] == null ||
-        (task[field] is string && task[field].size() <= maxLength);
-    }
-
-    function optionalBoundedList(task, field, maxSize) {
-      return !(field in task) || task[field] == null ||
-        (task[field] is list && task[field].size() <= maxSize);
-    }
-
-    function validRecurrence(value) {
-      return value == null || (
-        value is map && value.keys().hasOnly(['type', 'interval', 'days']) &&
-        value.keys().hasAll(['type']) &&
-        value.type in ['daily', 'weekly', 'monthly', 'yearly'] &&
-        (!('interval' in value) || (value.interval is int && value.interval >= 1 && value.interval <= 365)) &&
-        (!('days' in value) || (value.days is list && value.days.size() <= 7))
-      );
-    }
-
-    function validTask(task) {
-      return task is map &&
-        hasOnlyTaskFields(task) &&
-        task.keys().hasAll(['title', 'status', 'priority']) &&
-        task.title is string && task.title.size() >= 1 && task.title.size() <= 200 &&
-        task.status in ['active', 'done'] &&
-        ((task.status == 'done' && task.get('completedAt', null) is timestamp) ||
-          (task.status == 'active' && task.get('completedAt', null) == null)) &&
-        task.priority in [1, 2, 3, 4] &&
-        optionalString(task, 'description', 10000) &&
-        optionalTimestamp(task, 'completedAt') &&
-        optionalTimestamp(task, 'deletedAt') &&
-        optionalTimestamp(task, 'dueDate') &&
-        optionalTimestamp(task, 'createdAt') &&
-        optionalTimestamp(task, 'updatedAt') &&
-        optionalString(task, 'startTime', 5) &&
-        (!('estimatedMinutes' in task) || task.estimatedMinutes == null ||
-          (task.estimatedMinutes is number && task.estimatedMinutes >= 0 && task.estimatedMinutes <= 1440)) &&
-        optionalString(task, 'listId', 128) &&
-        optionalBoundedList(task, 'subtasks', 50) &&
-        optionalBoundedList(task, 'tags', 20) &&
-        optionalBoundedList(task, 'links', 20) &&
-        optionalBoundedList(task, 'reminders', 10) &&
-        validRecurrence(task.get('recurrence', null));
-    }
-
-    function validPreferences(preferences) {
-      return preferences is map &&
-        preferences.keys().hasOnly(['theme', 'language', 'firstDayOfWeek', 'timeFormat']) &&
-        preferences.keys().hasAll(['theme', 'language', 'firstDayOfWeek', 'timeFormat']) &&
-        preferences.theme in ['light', 'dark', 'auto'] &&
-        preferences.language in ['fr', 'en'] &&
-        preferences.firstDayOfWeek in ['monday', 'sunday'] &&
-        preferences.timeFormat in ['12h', '24h'];
-    }
-
-    match /users/{uid}/profile/{profileId} {
-      allow read: if isOwner(uid) && profileId == 'preferences';
-      allow create, update: if isOwner(uid) && profileId == 'preferences' && validPreferences(request.resource.data);
-      allow delete: if isOwner(uid) && profileId == 'preferences';
-    }
-
-    match /users/{uid}/lists/{listId} {
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && validList(request.resource.data);
-      allow update: if isOwner(uid) && validList(request.resource.data) &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
-      allow delete: if isOwner(uid);
-    }
-
-    match /users/{uid}/tags/{tagId} {
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && validTag(request.resource.data);
-      allow update: if isOwner(uid) && validTag(request.resource.data) &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
-      allow delete: if isOwner(uid);
-    }
-
-    match /users/{uid}/tasks/{taskId} {
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && validTask(request.resource.data);
-      allow update: if isOwner(uid) && validTask(request.resource.data) &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
-      allow delete: if isOwner(uid) &&
-        resource.data.deletedAt is timestamp &&
-        resource.data.deletedAt <= request.time - duration.value(30, 'd');
-    }
-  }
-}
-```
-
-Les tâches n'acceptent que les champs listés et valident les types, valeurs et limites ci-dessus. Les règles bornent la taille des tableaux (50 sous-tâches, 20 tags, 20 liens, 10 rappels) ; elles ne parcourent pas tous les éléments pour valider leur schéma. Les listes et tags n'acceptent que leurs champs documentés (`name`, `color`, `icon`, `order`, `createdAt`, `updatedAt`) et sont réservés au propriétaire. La suppression définitive d'une tâche n'est autorisée qu'après 30 jours avec un `deletedAt` valide. Aucune règle générique ne donne accès aux autres chemins. Valider les règles avec l'outil MCP Firebase s'il est disponible, puis les tester avec l'émulateur avant déploiement. Ne jamais utiliser `allow read, write: if true`, même temporairement.
+Après toute modification, exécuter `npm run test:rules` sur l’émulateur local et valider le fichier avec le validateur MCP Firebase. Ne jamais viser un projet réel pendant les tests ni utiliser `allow read, write: if true`.
 
 ### 8. Développement local
 

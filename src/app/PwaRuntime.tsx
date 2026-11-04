@@ -47,8 +47,9 @@ export function PwaRuntime() {
         <PwaUpdateBanner
           onDismiss={() => setUpdateAvailable(false)}
           onUpdate={() => {
-            if (hasPendingUnsavedChanges() && !window.confirm(fr.pwa.unsavedUpdate)) return;
+            if (hasPendingUnsavedChanges() && !window.confirm(fr.pwa.unsavedUpdate)) return false;
             void updateServiceWorker(true);
+            return true;
           }}
         />
       )}

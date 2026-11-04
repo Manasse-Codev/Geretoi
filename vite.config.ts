@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -6,7 +7,14 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
+  const cspHeader = env.VITE_CSP_TEST === 'true'
+    ? readFileSync(fileURLToPath(new URL('./public/_headers', import.meta.url)), 'utf8')
+      .match(/^\x20{2}Content-Security-Policy: (.+)$/m)?.[1]
+      ?.replace("connect-src 'self'", "connect-src 'self' http://127.0.0.1:9099 http://127.0.0.1:18080 ws://127.0.0.1:19150 ws://127.0.0.1:4176")
+      .replace('; upgrade-insecure-requests', '')
+    : undefined;
   return ({
+  ...(command === 'serve' && cspHeader ? { preview: { headers: { 'Content-Security-Policy': cspHeader } } } : {}),
   plugins: [
     react(),
     VitePWA({
@@ -28,7 +36,7 @@ export default defineConfig(({ command, mode }) => {
       },
       workbox: {
         navigateFallback: '/index.html',
-        globPatterns: command === 'build' ? ['**/*.{js,css,html,ico,png,svg,woff2}'] : [],
+        globPatterns: command === 'build' ? ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'] : [],
       },
     }),
   ],

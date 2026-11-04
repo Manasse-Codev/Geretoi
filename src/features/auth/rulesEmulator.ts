@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, it } from 'vitest';
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 
 function configuredProjectId(): string {
   const envProjectId = process.env.GCLOUD_PROJECT ?? process.env.FIREBASE_PROJECT_ID;
@@ -25,8 +25,8 @@ const validTask = {
   completedAt: null,
   deletedAt: null,
   dueDate: null,
-  createdAt: Timestamp.now(),
-  updatedAt: Timestamp.now(),
+  createdAt: serverTimestamp(),
+  updatedAt: serverTimestamp(),
   listId: null,
   tags: [],
   links: [],
@@ -62,6 +62,16 @@ describe('règles Firestore (émulateur)', () => {
     await assertFails(setDoc(task, validTask));
   });
 
+  it('refuse une liste sans limite et autorise une requête bornée', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users/owner/tasks/task-1'), validTask);
+    });
+    const db = testEnvironment.authenticatedContext('owner').firestore();
+    const tasks = collection(db, 'users/owner/tasks');
+    await assertFails(getDocs(tasks));
+    await assertSucceeds(getDocs(query(tasks, limit(100))));
+  });
+
   it('autorise le propriétaire à lire et écrire une tâche valide', async () => {
     const db = testEnvironment.authenticatedContext('owner').firestore();
     const task = doc(db, 'users/owner/tasks/task-1');
@@ -75,8 +85,8 @@ describe('règles Firestore (émulateur)', () => {
     await assertSucceeds(setDoc(profile, {
       theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h', density: 'comfortable',
     }));
-    await assertSucceeds(setDoc(doc(db, 'users/owner/lists/list-1'), { name: 'Personnel' }));
-    await assertSucceeds(setDoc(doc(db, 'users/owner/tags/tag-1'), { name: 'Maison' }));
+    await assertSucceeds(setDoc(doc(db, 'users/owner/lists/list-1'), { name: 'Personnel', createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+    await assertSucceeds(setDoc(doc(db, 'users/owner/tags/tag-1'), { name: 'Maison', createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
     await assertFails(getDoc(doc(testEnvironment.authenticatedContext('visitor').firestore(), 'users/owner/profile/preferences')));
   });
 
@@ -99,6 +109,12 @@ describe('règles Firestore (émulateur)', () => {
     ['un champ non prévu', { ...validTask, internalFlag: true }],
     ['une liste de sous-tâches trop longue', { ...validTask, subtasks: Array.from({ length: 51 }, () => ({})) }],
     ['une référence de liste non textuelle', { ...validTask, listId: 12 }],
+    ['un titre surdimensionné', { ...validTask, title: 'x'.repeat(201) }],
+    ['une description surdimensionnée', { ...validTask, description: 'x'.repeat(10001) }],
+    ['un mauvais type de date', { ...validTask, dueDate: 'demain' }],
+    ['un tableau de liens surdimensionné', { ...validTask, links: Array.from({ length: 21 }, () => 'https://example.test') }],
+    ['une date de complétion sur une tâche active', { ...validTask, completedAt: Timestamp.now() }],
+    ['un champ de rôle inattendu', { ...validTask, isAdmin: true }],
   ])('refuse une tâche invalide (%s)', async (_description, taskData) => {
     const db = testEnvironment.authenticatedContext('owner').firestore();
     await assertFails(setDoc(doc(db, 'users/owner/tasks/invalid'), taskData));
@@ -107,6 +123,25 @@ describe('règles Firestore (émulateur)', () => {
   it('refuse une collection non déclarée, même sous le uid du propriétaire', async () => {
     const db = testEnvironment.authenticatedContext('owner').firestore();
     await assertFails(setDoc(doc(db, 'users/owner/privateNotes/note-1'), { note: 'non autorisée' }));
+  });
+
+  it('traite un identifiant contenant des séparateurs encodés comme une valeur locale au document', async () => {
+    const db = testEnvironment.authenticatedContext('owner').firestore();
+    const reference = doc(db, 'users/owner/tasks/uid%2Fvisitor..task-1');
+    await assertSucceeds(setDoc(reference, validTask));
+    await assertSucceeds(getDoc(reference));
+    await assertFails(getDoc(doc(db, 'users/visitor/tasks/task-1')));
+  });
+
+  it('refuse la modification de createdAt mais permet la modification de updatedAt', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users/owner/tasks/task-1'), validTask);
+    });
+    const db = testEnvironment.authenticatedContext('owner').firestore();
+    const reference = doc(db, 'users/owner/tasks/task-1');
+    await assertFails(updateDoc(reference, { createdAt: Timestamp.fromMillis(1), updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(reference, { updatedAt: Timestamp.now() }));
+    await assertSucceeds(updateDoc(reference, { title: 'Titre valide', updatedAt: serverTimestamp() }));
   });
 
   it('refuse la suppression définitive immédiate d’une tâche', async () => {

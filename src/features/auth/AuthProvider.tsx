@@ -6,7 +6,7 @@ import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { fr } from '@/i18n/fr';
 import { AuthContext } from '@/features/auth/authContext';
 import { auth } from '@/lib/firebase';
-import { createEmailAccount, signInWithEmail, signInWithGoogle, signOutCurrentUser } from '@/features/auth/authService';
+import { createEmailAccount, PendingWritesError, signInWithEmail, signInWithGoogle, signOutCurrentUser } from '@/features/auth/authService';
 import type { AuthContextValue, AuthErrorCode } from '@/features/auth/authTypes';
 import type { UserPreferences } from '@/types/models';
 
@@ -19,6 +19,7 @@ const defaultPreferences: UserPreferences = {
 };
 
 function toAuthErrorCode(error: unknown): AuthErrorCode {
+  if (error instanceof PendingWritesError) return 'pendingWrites';
   const code = error instanceof FirebaseError ? error.code : '';
   if (typeof navigator !== 'undefined' && !navigator.onLine && ['auth/network-request-failed', 'unavailable', 'deadline-exceeded'].includes(code)) return 'offline';
   if (code === 'auth/invalid-email') return 'invalidEmail';
@@ -28,7 +29,6 @@ function toAuthErrorCode(error: unknown): AuthErrorCode {
   }
   if (['auth/network-request-failed', 'unavailable', 'deadline-exceeded'].includes(code)) return 'networkUnavailable';
   if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(code)) return 'popupBlocked';
-  if (code === 'auth/email-already-in-use') return 'emailAlreadyInUse';
   return 'unknown';
 }
 
@@ -102,7 +102,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!authenticatedUid) return;
     void Promise.all([import('@/features/tasks/taskRepository'), import('@/features/tasks/dataErrors')])
       .then(([repository, errors]) => repository.purgeExpiredTasks(authenticatedUid)
-        .catch((caught: unknown) => console.error(fr.data.errors[errors.toDataError(caught).code])));
+        .catch((caught: unknown) => {
+          if (import.meta.env.DEV) console.error(fr.data.errors[errors.toDataError(caught).code]);
+        }));
   }, [authenticatedUid]);
 
   const runAuthAction = useCallback(async (action: () => Promise<void>) => {

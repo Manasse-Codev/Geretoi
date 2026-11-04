@@ -7,27 +7,31 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    function isBoundedQuery() {
+      return request.query.limit is int && request.query.limit <= 500;
+    }
+
     function validList(list) {
       return list is map &&
         list.keys().hasOnly(['name', 'color', 'icon', 'order', 'createdAt', 'updatedAt']) &&
-        list.keys().hasAll(['name']) &&
+        list.keys().hasAll(['name', 'createdAt', 'updatedAt']) &&
         list.name is string && list.name.size() >= 1 && list.name.size() <= 80 &&
         optionalString(list, 'color', 32) &&
         optionalString(list, 'icon', 64) &&
         (!('order' in list) || (list.order is int && list.order >= 0 && list.order <= 10000)) &&
         optionalTimestamp(list, 'createdAt') &&
-        optionalTimestamp(list, 'updatedAt');
+        list.createdAt is timestamp && list.updatedAt is timestamp;
     }
 
     function validTag(tag) {
       return tag is map &&
         tag.keys().hasOnly(['name', 'color', 'order', 'createdAt', 'updatedAt']) &&
-        tag.keys().hasAll(['name']) &&
+        tag.keys().hasAll(['name', 'createdAt', 'updatedAt']) &&
         tag.name is string && tag.name.size() >= 1 && tag.name.size() <= 80 &&
         optionalString(tag, 'color', 32) &&
         (!('order' in tag) || (tag.order is int && tag.order >= 0 && tag.order <= 10000)) &&
         optionalTimestamp(tag, 'createdAt') &&
-        optionalTimestamp(tag, 'updatedAt');
+        tag.createdAt is timestamp && tag.updatedAt is timestamp;
     }
 
     function hasOnlyTaskFields(task) {
@@ -65,7 +69,7 @@ service cloud.firestore {
     function validTask(task) {
       return task is map &&
         hasOnlyTaskFields(task) &&
-        task.keys().hasAll(['title', 'status', 'priority']) &&
+        task.keys().hasAll(['title', 'status', 'priority', 'createdAt', 'updatedAt']) &&
         task.title is string && task.title.size() >= 1 && task.title.size() <= 200 &&
         task.status in ['active', 'done'] &&
         ((task.status == 'done' && task.get('completedAt', null) is timestamp) ||
@@ -106,26 +110,35 @@ service cloud.firestore {
     }
 
     match /users/{uid}/lists/{listId} {
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && validList(request.resource.data);
+      allow get: if isOwner(uid);
+      allow list: if isOwner(uid) && isBoundedQuery();
+      allow create: if isOwner(uid) && validList(request.resource.data) &&
+        request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
       allow update: if isOwner(uid) && validList(request.resource.data) &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']) &&
+        request.resource.data.updatedAt == request.time;
       allow delete: if isOwner(uid);
     }
 
     match /users/{uid}/tags/{tagId} {
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && validTag(request.resource.data);
+      allow get: if isOwner(uid);
+      allow list: if isOwner(uid) && isBoundedQuery();
+      allow create: if isOwner(uid) && validTag(request.resource.data) &&
+        request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
       allow update: if isOwner(uid) && validTag(request.resource.data) &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']) &&
+        request.resource.data.updatedAt == request.time;
       allow delete: if isOwner(uid);
     }
 
     match /users/{uid}/tasks/{taskId} {
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && validTask(request.resource.data);
+      allow get: if isOwner(uid);
+      allow list: if isOwner(uid) && isBoundedQuery();
+      allow create: if isOwner(uid) && validTask(request.resource.data) &&
+        request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
       allow update: if isOwner(uid) && validTask(request.resource.data) &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']);
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']) &&
+        request.resource.data.updatedAt == request.time;
       allow delete: if isOwner(uid) &&
         resource.data.deletedAt is timestamp &&
         resource.data.deletedAt <= request.time - duration.value(30, 'd');

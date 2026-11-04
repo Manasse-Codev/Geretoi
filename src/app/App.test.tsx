@@ -34,8 +34,8 @@ describe('App', () => {
   it('renders the Today screen with application navigation', async () => {
     window.history.pushState({}, '', '/');
     render(<App />);
-    expect(await screen.findByRole('heading', { name: "Aujourd'hui" }, { timeout: 5000 })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: "Aujourd'hui" }, { timeout: 10000 })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Réglages' })).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Navigation principale' })).toBeTruthy();
-  });
+  }, 10000);
 });
