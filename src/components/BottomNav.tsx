@@ -19,12 +19,14 @@ const entranceKey = 'dayflow:add-button-entered';
 export function BottomNav({ active, onNavigate, onAdd, addButtonRef, pulseKey = 0 }: BottomNavProps) {
   const prefersReducedMotion = useReducedMotion() ?? false;
   const tabs = useMemo(() => [
-    { id: 'today' as const, label: fr.navigation.today, icon: <CalendarDays size={18} /> },
-    { id: 'planner' as const, label: fr.navigation.planner, icon: <CalendarDays size={18} /> },
-    { id: 'lists' as const, label: fr.navigation.lists, icon: <ListChecks size={18} /> },
-    { id: 'stats' as const, label: fr.navigation.stats, icon: <BarChart3 size={18} /> },
+    { id: 'today' as const, label: fr.navigation.today, icon: <CalendarDays /> },
+    { id: 'planner' as const, label: fr.navigation.planner, icon: <CalendarDays /> },
+    { id: 'lists' as const, label: fr.navigation.lists, icon: <ListChecks /> },
+    { id: 'stats' as const, label: fr.navigation.stats, icon: <BarChart3 /> },
   ], []);
   const tabColumns = [1, 2, 4, 5];
+  const [labelsHidden, setLabelsHidden] = useState(false);
+  const [narrowToday, setNarrowToday] = useState(false);
   const [alreadyEntered] = useState(() => {
     try { return window.sessionStorage.getItem(entranceKey) === 'true'; } catch { return false; }
   });
@@ -38,6 +40,22 @@ export function BottomNav({ active, onNavigate, onAdd, addButtonRef, pulseKey = 
   const [pulseActive, setPulseActive] = useState(false);
   const lastPulse = useRef(0);
   const openingTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    const updateLabelMode = () => {
+      const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      setLabelsHidden(rootFontSize >= 20.8);
+      setNarrowToday(window.innerWidth < 340);
+    };
+    updateLabelMode();
+    window.addEventListener('resize', updateLabelMode);
+    const observer = new MutationObserver(updateLabelMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+    return () => {
+      window.removeEventListener('resize', updateLabelMode);
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (alreadyEntered && !prefersReducedMotion) setEntranceDone(true);
@@ -90,16 +108,25 @@ export function BottomNav({ active, onNavigate, onAdd, addButtonRef, pulseKey = 
   }
 
   return (
-    <nav aria-label={fr.navigation.label} className="bottom-nav surface-raised">
+    <nav aria-label={fr.navigation.label} className={`bottom-nav surface-raised${labelsHidden ? ' bottom-nav--labels-hidden' : ''}`}>
       <div className="bottom-nav__tabs">
         <span
           aria-hidden="true"
           className="bottom-nav__indicator"
-          style={{ transform: `translateX(${((tabColumns[tabs.findIndex((tab) => tab.id === active)] ?? 1) - 1) * 100}%)` }}
+          style={{
+            transform: active === 'today'
+              ? 'translateX(0)'
+              : active === 'planner'
+                ? 'translateX(100%)'
+                : active === 'lists'
+                  ? 'translateX(calc(200% + var(--size-bottom-nav-fab-slot)))'
+                  : 'translateX(calc(300% + var(--size-bottom-nav-fab-slot)))',
+          }}
         />
         {tabs.map((tab, index) => (
           <button
             aria-current={active === tab.id ? 'page' : undefined}
+            aria-label={tab.label}
             className="bottom-nav__tab focus-ring"
             key={tab.id}
             onClick={() => onNavigate(tab.id)}
@@ -107,7 +134,7 @@ export function BottomNav({ active, onNavigate, onAdd, addButtonRef, pulseKey = 
             type="button"
           >
             {tab.icon}
-            <span>{tab.label}</span>
+            <span>{tab.id === 'today' && narrowToday ? fr.navigation.todayShort : tab.label}</span>
           </button>
         ))}
       </div>

@@ -1,9 +1,10 @@
-import { useRef } from 'react';
-import type { KeyboardEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 
 export interface SegmentOption<Value extends string = string> {
   value: Value;
   label: string;
+  icon?: ReactNode;
 }
 
 export interface SegmentedControlProps<Value extends string = string> {
@@ -15,6 +16,18 @@ export interface SegmentedControlProps<Value extends string = string> {
 
 export function SegmentedControl<Value extends string>({ label, options, value, onValueChange }: SegmentedControlProps<Value>) {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
+  const [scrollable, setScrollable] = useState(false);
+  const groupRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const group = groupRef.current;
+    if (!group || typeof ResizeObserver === 'undefined') return;
+    const update = () => setScrollable(group.scrollWidth > group.clientWidth + 1);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(group);
+    return () => observer.disconnect();
+  }, [options.length]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
     let nextIndex: number | undefined;
@@ -32,7 +45,7 @@ export function SegmentedControl<Value extends string>({ label, options, value, 
   };
 
   return (
-    <div aria-label={label} className="segmented surface-inset" role="radiogroup">
+    <div aria-label={label} className={`segmented surface-inset${scrollable ? ' segmented--scrollable' : ''}`} ref={groupRef} role="radiogroup" style={{ '--segmented-count': options.length } as CSSProperties}>
       {options.map((option, index) => (
         <button
           aria-checked={value === option.value}
@@ -45,7 +58,8 @@ export function SegmentedControl<Value extends string>({ label, options, value, 
           tabIndex={value === option.value ? 0 : -1}
           type="button"
         >
-          {option.label}
+          {option.icon}
+          <span>{option.label}</span>
         </button>
       ))}
     </div>

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { ArrowRight, CalendarDays, Check, Cloud, Download, LogOut, Palette, Trash2, UserRound } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, Cloud, Download, LogOut, Monitor, Moon, Palette, Sun, Trash2, UserRound } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { SegmentedControl } from '@/components/SegmentedControl';
@@ -57,9 +57,9 @@ export function SettingsPage() {
   }
 
   const themeOptions = [
-    { value: 'light', label: fr.settingsPage.themeLight },
-    { value: 'dark', label: fr.settingsPage.themeDark },
-    { value: 'auto', label: fr.settingsPage.themeAuto },
+    { value: 'light', label: fr.settingsPage.themeLight, icon: <Sun aria-hidden="true" size={16} /> },
+    { value: 'dark', label: fr.settingsPage.themeDark, icon: <Moon aria-hidden="true" size={16} /> },
+    { value: 'auto', label: fr.settingsPage.themeAuto, icon: <Monitor aria-hidden="true" size={16} /> },
   ];
   return <div className="screen screen--settings">
     <header className="screen-heading"><p className="eyebrow">DayFlow</p><h1>{fr.pages.settings}</h1><p className="muted">{fr.settingsPage.description}</p></header>

@@ -3,6 +3,7 @@ dist/
 dev-dist/
 test-results/
 artifacts/mobile-scale/
+artifacts/bottom-nav/
 coverage/
 .env
 .env.*

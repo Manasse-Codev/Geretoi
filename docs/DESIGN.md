@@ -92,7 +92,35 @@ La valeur par défaut est **Confortable**. Entre 360 et 430 px, les valeurs mobi
 | Rayon des cartes | `1.25rem` | idem | `1.5rem` |
 | Puces et champs | `2.75rem` / `3rem` | idem | `2.75rem` / `3rem` |
 
+### Barre de navigation mobile
+
+La barre basse utilise cinq colonnes : deux colonnes d’onglets égales, une réserve centrale fixe de
+`3.5rem` sur mobile (`4rem` à partir de 768 px) pour le bouton « + », puis deux colonnes égales.
+Ses marges latérales sont de `.5rem` sur mobile et `1rem` au-delà ; son padding interne est de
+`.25rem` sur mobile et `.375rem` au-delà. Les onglets gardent une cible minimale de 44 × 44 px,
+des icônes de `1.375rem`, un écart vertical de `.25rem`, des libellés de `.75rem` minimum et un
+interligne de `1.1`, sans retour à la ligne.
+
+Sous 340 px de largeur, le libellé visible « Aujourd’hui » devient « Jour » ; son `aria-label`
+reste « Aujourd’hui ». Lorsque la taille de police racine atteint 130 % ou plus, les libellés
+deviennent des icônes seules avec leur nom complet accessible. Cette exception concerne uniquement
+la barre d’onglets afin de préserver l’écart de 8 px entre libellés et les zones tactiles.
+
 Le padding inférieur du shell reste réservé à la navigation fixe et à la zone sûre (`env(safe-area-inset-bottom)`), afin qu'aucun contenu ne passe dessous. Le viewport conserve le zoom utilisateur et ne définit ni `maximum-scale`, ni `user-scalable=no`.
+
+### Conteneur de page et contrôles segmentés
+
+Chaque écran applicatif passe par l’unique conteneur `.page-content` : `width: 100%`,
+`max-width: var(--page-max)`, `margin-inline: auto`, gouttières symétriques `--page-gutter`
+et `box-sizing: border-box`. Les cartes restent dans cette colonne ou dans une grille bornée
+avec `minmax(0, 1fr)` ; aucune carte n’ajoute de marge horizontale isolée et aucune mise en
+page n’utilise `100vw`.
+
+Les contrôles segmentés utilisent un padding interne de `4px`, un écart de `5px`, des segments
+égaux d’au moins `44px` de haut et des libellés de `15px` sans retour à la ligne. Quand leur
+contenu dépasse la largeur disponible, ils passent en défilement horizontal contrôlé plutôt
+que de couper le texte. Les lignes de réglages deviennent verticales sous `600px` afin que le
+contrôle occupe toute la largeur ; les interrupteurs et valeurs longues suivent la même règle.
 
 ## Formes, ombres et espacements
 

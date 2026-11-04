@@ -14,6 +14,7 @@ export const fr = {
   navigation: {
     label: 'Navigation principale',
     today: "Aujourd'hui",
+    todayShort: 'Jour',
     planner: 'Planning',
     lists: 'Listes',
     stats: 'Stats',

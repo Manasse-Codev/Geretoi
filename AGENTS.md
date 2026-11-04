@@ -53,6 +53,10 @@ Style néomorphisme (soft UI) : surfaces monochromes, ombres douces doubles, él
 ## Qualité
 Lancer lint, vérification de types, tests et build avant de conclure une tâche. Ne pas ajouter de dépendance sans la justifier dans le message final. Ne jamais commit de secrets ni de fichier .env.
 
+Les cartes et conteneurs de contenu doivent rester centrés par le conteneur de page :
+pas de marge horizontale isolée sur une carte, pas de largeur `100vw` pour la mise en page,
+et les gouttières passent par les tokens du conteneur de page.
+
 Les deux hébergeurs utilisent Node 24.20.0, `npm run build` et `dist`. Conserver les règles propres à chaque plateforme dans `vercel.json` et `public/_redirects`/`public/_headers`. Voir `docs/DEPLOY.md`.
 
 ## Méthode de travail
