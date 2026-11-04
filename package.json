@@ -13,7 +13,11 @@
     "test:rules": "node scripts/run-emulator-tests.mjs rules",
     "test:rules:unit": "vitest run --config vitest.rules.config.ts",
     "test:integration": "node scripts/run-emulator-tests.mjs integration",
+    "test:e2e": "node scripts/run-playwright.mjs",
+    "test:e2e:sw": "node scripts/run-playwright.mjs --sw-dev",
+    "test:e2e:run": "playwright test",
     "emulators": "firebase emulators:start --only auth,firestore",
+    "check:pwa": "node scripts/check-pwa-installability.mjs",
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {

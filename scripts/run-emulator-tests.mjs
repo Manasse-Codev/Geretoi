@@ -23,15 +23,15 @@ const env = { ...process.env, ...(suite === 'integration' ? { VITE_USE_EMULATORS
 
 if (emulatorsAreRunning) {
   const args = suite === 'rules'
-    ? ['run', 'test:rules:unit']
-    : ['exec', '--', 'vitest', 'run', '--config', 'vitest.integration.config.ts'];
-  const result = spawnSync('npm', args, { stdio: 'inherit', env });
+    ? ['node_modules/vitest/vitest.mjs', 'run', '--config', 'vitest.rules.config.ts']
+    : ['node_modules/vitest/vitest.mjs', 'run', '--config', 'vitest.integration.config.ts', '--pool=forks', '--maxWorkers=1', '--no-file-parallelism'];
+  const result = spawnSync(process.execPath, args, { stdio: 'inherit', env });
   process.exit(result.status ?? 1);
 }
 
 const emulatorList = suite === 'rules' ? 'firestore' : 'auth,firestore';
 const testCommand = suite === 'rules'
   ? 'npm run test:rules:unit'
-  : 'VITE_USE_EMULATORS=true npm exec -- vitest run --config vitest.integration.config.ts';
+  : 'VITE_USE_EMULATORS=true npm exec -- vitest run --config vitest.integration.config.ts --pool=forks --maxWorkers=1 --no-file-parallelism';
 const result = spawnSync('firebase', ['emulators:exec', '--only', emulatorList, testCommand], { stdio: 'inherit', env, shell: process.platform === 'win32' });
 process.exit(result.status ?? 1);

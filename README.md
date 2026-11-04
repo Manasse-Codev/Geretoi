@@ -4,7 +4,21 @@ DayFlow est une **Progressive Web App** (installable, utilisable hors-ligne, syn
 
 ---
 
-## ✨ Fonctionnalités
+## ✨ Périmètre produit visé
+
+La liste ci-dessous décrit le périmètre produit souhaité, pas l'état complet de la version livrée. Pour éviter de confondre les deux, voici l'état fonctionnel actuel :
+
+| Domaine | État livré |
+|---|---|
+| Connexion e-mail et Google, tâches avec sauvegarde, complétion et corbeille | Disponible |
+| Aujourd'hui, listes, étiquettes, Planning hebdomadaire et Historique | Disponible, avec limites décrites dans la feuille de route |
+| Statistiques | Synthèse des tâches terminées chargées ; pas de taux global ni de temps de focus |
+| Préférences, thème, export JSON et calendrier | Disponible |
+| Installation PWA et utilisation hors ligne | Disponible ; partage entrant et notifications restent à faire |
+| Récurrence automatique, rappels, recherche dans descriptions/sous-tâches, vues enregistrées | À faire |
+| Import CSV/JSON, minuteur Pomodoro, collaboration et page d'accueil configurable | À faire |
+
+Le détail des fonctionnalités prévues ci-dessous sert de cible produit. Ne pas présenter les éléments marqués « À faire » comme disponibles.
 
 ### 1. Gestion des tâches
 - Créer, modifier, dupliquer et supprimer une tâche
@@ -74,7 +88,7 @@ DayFlow est une **Progressive Web App** (installable, utilisable hors-ligne, syn
 - ✅ Chargement instantané (App Shell)
 - ✅ Mises à jour silencieuses avec bannière « Nouvelle version disponible »
 - ✅ Raccourcis d'application (Ajouter une tâche, Aujourd'hui)
-- ✅ Partage vers l'app (Web Share Target) : envoyer un texte ou un lien pour créer une tâche
+- Partage entrant (Web Share Target) : prévu, pas encore disponible
 
 ### 10. Compte et synchronisation multi-appareils
 - Connexion via **Firebase Authentication** (Google ou email / mot de passe)
@@ -250,6 +264,8 @@ VITE_FIREBASE_APP_ID=...
 npm run dev
 ```
 
+Le service worker est désactivé par défaut en développement. Pour tester son enregistrement et la bannière de mise à jour, définissez `VITE_ENABLE_SW_DEV=true` dans `.env.local`, puis redémarrez Vite. Gardez cette valeur à `false` ou retirez-la pour le développement courant.
+
 ### Build de production
 
 ```bash
@@ -283,22 +299,24 @@ Alternatives gratuites : Netlify, Vercel (Hobby), GitHub Pages.
 
 ## 🗺️ Roadmap
 
+`[x]` livré · `[~]` partiel · `[ ]` à faire
+
 **v1.0 — MVP**
-- [ ] Authentification et synchronisation multi-appareils (Firestore)
-- [ ] CRUD des tâches, sous-tâches, priorités
-- [ ] Vue Aujourd'hui + listes + tags
-- [ ] Mode hors-ligne + installation PWA
-- [ ] Thème clair/sombre
+- [x] Authentification et synchronisation multi-appareils
+- [x] CRUD des tâches, sous-tâches et priorités
+- [x] Vue Aujourd'hui, listes et étiquettes
+- [x] Mode hors-ligne et installation PWA
+- [x] Thème clair/sombre
 
 **v1.1**
 - [ ] Notifications locales
 - [ ] Récurrence
-- [ ] Recherche et filtres enregistrés
+- [~] Recherche par titre et filtres simples ; recherche avancée et filtres enregistrés à faire
 
 **v1.2**
-- [ ] Planning horaire (time blocking)
-- [ ] Pomodoro et statistiques
-- [ ] Export / import
+- [x] Planning horaire avec déplacement des tâches
+- [~] Statistiques de base ; Pomodoro et suivi de temps à faire
+- [~] Export JSON et calendrier ; import à faire
 
 **v1.3**
 - [ ] Notifications push serveur (FCM + Cloudflare Worker)

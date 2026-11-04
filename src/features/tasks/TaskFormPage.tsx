@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, Bell, CalendarDays, ChevronDown, Flame, FolderOpen, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Checkbox } from '@/components/Checkbox';
 import { TextField } from '@/components/TextField';
+import { RetryNotice } from '@/components/RetryNotice';
 import { useLists } from '@/features/lists/useLists';
 import { useTags } from '@/features/tags/useTags';
 import { useTaskActions } from '@/features/tasks';
 import { fr } from '@/i18n/fr';
+import { setUnsavedChanges } from '@/lib/unsavedChanges';
 import type { TaskPriority, Subtask } from '@/types/models';
 
 function localDateString(date: Date) {
@@ -19,8 +21,8 @@ function localDateString(date: Date) {
 export function TaskFormPage() {
   const navigate = useNavigate();
   const actions = useTaskActions();
-  const { lists } = useLists();
-  const { tags } = useTags();
+  const listsState = useLists(); const lists = listsState.lists;
+  const tagsState = useTags(); const tags = tagsState.tags;
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(localDateString(new Date()));
@@ -33,7 +35,10 @@ export function TaskFormPage() {
   const [draftSubtask, setDraftSubtask] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const priorities: TaskPriority[] = [4, 3, 2, 1];
+
+  useEffect(() => () => setUnsavedChanges(false), []);
 
   function makeDueDate(value: string) {
     if (!value) return null;
@@ -42,13 +47,15 @@ export function TaskFormPage() {
   }
 
   async function submit(again = false) {
-    if (!title.trim()) { setError(fr.taskForm.emptyTitle); return; }
+    if (!title.trim() || submitting) { if (!title.trim()) setError(fr.taskForm.emptyTitle); return; }
     setError(null);
+    setSubmitting(true);
     try {
       await actions.create({ title, description, priority, dueDate: makeDueDate(date), startTime: time || null, estimatedMinutes: minutes, listId: listId || null, tags: selectedTags, subtasks });
       if (again) { setTitle(''); setDescription(''); setSubtasks([]); setDraftSubtask(''); }
-      else navigate(-1);
+      else { setUnsavedChanges(false); navigate(-1); }
     } catch { setError(actions.errorMessage ?? fr.task.createError); }
+    finally { setSubmitting(false); }
   }
 
   function addSubtask() {
@@ -64,8 +71,8 @@ export function TaskFormPage() {
   const quickDates = [['Aujourd’hui', 0], ['Demain', 1], ['Ce week-end', weekendOffset]] as const;
 
   return <div className="screen screen--task-form">
-    <header className="form-toolbar"><Button aria-label={fr.task.cancel} onClick={() => navigate(-1)} variant="ghost"><ArrowLeft size={18} />{fr.task.cancel}</Button><h1>{fr.pages.newTask}</h1><Button aria-label={fr.task.add} className="form-save" onClick={() => void submit()} variant="primary">✓</Button></header>
-    <form className="task-form" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+    <header className="form-toolbar"><Button aria-label={fr.task.cancel} disabled={submitting} onClick={() => { setUnsavedChanges(false); navigate(-1); }} variant="ghost"><ArrowLeft size={18} />{fr.task.cancel}</Button><h1>{fr.pages.newTask}</h1><Button aria-label={fr.task.add} className="form-save" disabled={submitting} loading={submitting} onClick={() => void submit()} variant="primary">✓</Button></header>
+    <form className="task-form" onChange={() => setUnsavedChanges(true)} onClickCapture={(event) => { if ((event.target as HTMLElement).closest('button')) setUnsavedChanges(true); }} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
       <TextField autoFocus error={error ?? undefined} label={fr.task.title} onChange={(event) => setTitle(event.currentTarget.value)} placeholder={fr.taskForm.titlePlaceholder} value={title} />
       <div className="quick-date-row" role="group" aria-label={fr.taskForm.dateLabel}>
         {quickDates.map(([, offset], index) => { const expected = new Date(); expected.setDate(expected.getDate() + offset); const label = [fr.taskForm.dateToday, fr.taskForm.dateTomorrow, fr.taskForm.dateWeekend][index] ?? ''; return <button aria-pressed={date === localDateString(expected)} className="filter-chip surface-raised" key={label} onClick={() => quickDate(offset)} type="button"><CalendarDays size={16} />{label}</button>; })}
@@ -87,7 +94,9 @@ export function TaskFormPage() {
         </div>}
       </Card>
       {error && <p className="inline-error" role="alert">{error}</p>}
-      <div className="form-actions"><Button className="form-submit" loading={false} onClick={() => void submit()} type="button" variant="primary"><Plus size={19} />{fr.task.add}</Button><Button onClick={() => void submit(true)} variant="ghost">{fr.task.addAnother}</Button></div>
+      {listsState.errorMessage && <RetryNotice loading={listsState.loading} message={listsState.errorMessage} onRetry={listsState.retry} />}
+      {tagsState.errorMessage && <RetryNotice loading={tagsState.loading} message={tagsState.errorMessage} onRetry={tagsState.retry} />}
+      <div className="form-actions"><Button className="form-submit" disabled={submitting} loading={submitting} onClick={() => void submit()} type="button" variant="primary"><Plus size={19} />{fr.task.add}</Button><Button disabled={submitting} loading={submitting} onClick={() => void submit(true)} variant="ghost">{fr.task.addAnother}</Button></div>
     </form>
   </div>;
 }

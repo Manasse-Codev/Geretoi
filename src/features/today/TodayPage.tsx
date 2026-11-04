@@ -4,9 +4,9 @@ import { isSameDay } from 'date-fns';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ProgressRing } from '@/components/ProgressRing';
-import { SyncIndicator } from '@/components/SyncIndicator';
 import { TaskCard } from '@/components/TaskCard';
 import { Toast } from '@/components/Toast';
+import { RetryNotice } from '@/components/RetryNotice';
 import { useLists } from '@/features/lists/useLists';
 import { useTags } from '@/features/tags/useTags';
 import { useHistory, useOverdueTasks, useTaskActions, useTodayTasks } from '@/features/tasks';
@@ -21,8 +21,8 @@ export function TodayPage() {
   const today = useTodayTasks();
   const overdue = useOverdueTasks();
   const history = useHistory();
-  const { lists } = useLists();
-  const { tags } = useTags();
+  const listsState = useLists(); const lists = listsState.lists;
+  const tagsState = useTags(); const tags = tagsState.tags;
   const actions = useTaskActions();
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
@@ -43,7 +43,6 @@ export function TodayPage() {
   const shown = filter === 'done' ? completedToday.filter(matchesDetails) : filter === 'overdue' ? overdue.tasks.filter(matchesDetails) : matching;
   const top = [...all, ...completedToday].sort((a, b) => a.priority - b.priority || (a.startTime ?? '').localeCompare(b.startTime ?? '')).slice(0, 3);
   const progress = top.length ? Math.round((completedToday.filter((task) => top.some((item) => item.id === task.id)).length / top.length) * 100) : 0;
-  const sync = today.sync;
 
   async function perform(label: string, operation: () => Promise<() => Promise<void>>) {
     try {
@@ -55,7 +54,7 @@ export function TodayPage() {
   return <div className="screen screen--today">
     <header className="screen-heading screen-heading--today">
       <div className="today-heading"><Sun aria-hidden="true" size={18} /><span>{formatFrenchDate(new Date(), 'EEEE d MMMM yyyy')}</span></div>
-      <h1>{fr.pages.today}</h1><SyncIndicator sync={sync} />
+      <h1>{fr.pages.today}</h1>
     </header>
     <div className="task-search"><Search aria-hidden="true" size={20} /><input aria-label={fr.task.search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder={fr.todayPage.searchPlaceholder} type="search" value={search} /><button aria-expanded={filterOpen} aria-label={fr.todayPage.filters} className="icon-button" onClick={() => setFilterOpen((value) => !value)} type="button"><SlidersHorizontal aria-hidden="true" size={19} /></button></div>
     {filterOpen && <div className="advanced-filters"><label><span>{fr.todayPage.list}</span><select onChange={(event) => setListFilter(event.currentTarget.value)} value={listFilter}><option value="">{fr.todayPage.allLists}</option>{lists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}</select></label><label><span>{fr.todayPage.tag}</span><select onChange={(event) => setTagFilter(event.currentTarget.value)} value={tagFilter}><option value="">{fr.todayPage.allTags}</option>{tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label></div>}
@@ -70,7 +69,10 @@ export function TodayPage() {
     {today.loading && today.tasks.length === 0 ? <div className="task-list" aria-busy="true"><div className="task-skeleton surface-raised" /><div className="task-skeleton surface-raised" /></div> : shown.length === 0 ? <EmptyState title={fr.task.empty} description={fr.task.emptyDescription} /> : <div className="task-list">
       {shown.map((task: Task) => <TaskCard key={task.id} task={task} variant={filter === 'done' ? 'history' : 'active'} listName={lists.find((list) => list.id === task.listId)?.name} onComplete={filter === 'done' ? undefined : () => void perform(fr.task.undoComplete, () => actions.complete(task.id))} onReopen={filter === 'done' ? () => void actions.reopen(task.id).catch(() => undefined) : undefined} onDelete={filter === 'done' ? undefined : () => void perform(fr.task.undoDelete, () => actions.softDelete(task.id))} onSubtask={(id, checked) => void actions.toggleSubtask(task.id, id, checked).catch(() => undefined)} onReschedule={filter === 'done' ? undefined : () => { const next = new Date(); next.setDate(next.getDate() + 1); void perform(fr.task.undoReschedule, () => actions.reschedule(task.id, next)); }} />)}
     </div>}
-    {today.errorMessage && <p className="inline-error" role="alert">{today.errorMessage}</p>}
+    {today.errorMessage && <RetryNotice loading={today.loading} message={today.errorMessage} onRetry={today.retry} />}
+    {overdue.errorMessage && <RetryNotice loading={overdue.loading} message={overdue.errorMessage} onRetry={overdue.retry} />}
+    {listsState.errorMessage && <RetryNotice loading={listsState.loading} message={listsState.errorMessage} onRetry={listsState.retry} />}
+    {tagsState.errorMessage && <RetryNotice loading={tagsState.loading} message={tagsState.errorMessage} onRetry={tagsState.retry} />}
     {actions.errorMessage && <p className="inline-error" role="alert">{actions.errorMessage}</p>}
     {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} onUndo={() => { void toast.undo(); setToast(null); }} />}
   </div>;

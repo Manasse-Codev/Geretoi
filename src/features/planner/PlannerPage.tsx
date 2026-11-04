@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { DndContext, KeyboardSensor, PointerSensor, defaultKeyboardCoordinateGetter, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { addDays, addWeeks, endOfWeek, format, isSameDay, startOfWeek, subWeeks } from 'date-fns';
 import { fr as frDate } from 'date-fns/locale';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, GripVertical, Plus } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
-import { SyncIndicator } from '@/components/SyncIndicator';
+import { RetryNotice } from '@/components/RetryNotice';
 import { useTaskActions, useTasksInRange, useUnscheduledTasks } from '@/features/tasks';
 import { usePreferences } from '@/features/settings/usePreferences';
 import { fr } from '@/i18n/fr';
@@ -40,7 +40,7 @@ export function PlannerPage() {
   const tasks = useTasksInRange(start, end);
   const unscheduled = useUnscheduledTasks();
   const actions = useTaskActions();
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: defaultKeyboardCoordinateGetter }));
   const dayTasks = tasks.tasks.filter((task) => task.dueDate && isSameDay(task.dueDate, selectedDate)).sort((a, b) => (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99'));
 
   async function schedule(taskId: string, date: Date) {
@@ -56,7 +56,7 @@ export function PlannerPage() {
   return <div className="screen screen--planner">
     <header className="screen-heading screen-heading--row"><div><p className="eyebrow"><CalendarDays size={17} />{fr.plannerPage.title}</p><h1>{format(selectedDate, 'MMMM yyyy', { locale: frDate })}</h1></div><div className="week-controls"><Button aria-label={fr.plannerPage.previous} onClick={() => setSelectedDate((date) => subWeeks(date, 1))}><ChevronLeft /></Button><Button aria-label={fr.plannerPage.next} onClick={() => setSelectedDate((date) => addWeeks(date, 1))}><ChevronRight /></Button></div></header>
     <div className="week-strip" aria-label={fr.plannerPage.chooseDay} role="group">{days.map((date) => <button aria-pressed={isSameDay(date, selectedDate)} className="week-day surface-raised" key={dayKey(date)} onClick={() => setSelectedDate(date)} type="button"><span>{format(date, 'EEE', { locale: frDate })}</span><strong>{format(date, 'd')}</strong></button>)}</div>
-    <div className="planner-summary"><span>{fr.plannerPage.today}</span><SyncIndicator sync={tasks.sync} /></div>
+    <div className="planner-summary"><span>{fr.plannerPage.today}</span></div>
     <div className="planner-workspace">
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <Card className="timeline-card">
@@ -70,7 +70,9 @@ export function PlannerPage() {
         <Card className="unscheduled-card"><div className="section-heading"><h2>{fr.plannerPage.unscheduled}</h2><span>{unscheduled.tasks.length}</span></div><p className="muted">{fr.plannerPage.dragHelp}</p>{unscheduled.loading ? <div className="task-skeleton surface-raised" /> : unscheduled.tasks.length === 0 ? <EmptyState title={fr.plannerPage.allScheduled} description={fr.plannerPage.unscheduledHelp} /> : <div className="planner-unscheduled">{unscheduled.tasks.map((task) => <DraggableTask key={task.id} task={task} onSchedule={() => void schedule(task.id, selectedDate)} />)}</div>}</Card>
       </DndContext>
     </div>
-    {(tasks.errorMessage || unscheduled.errorMessage || actions.errorMessage) && <p className="inline-error" role="alert">{tasks.errorMessage || unscheduled.errorMessage || actions.errorMessage}</p>}
+    {tasks.errorMessage && <RetryNotice loading={tasks.loading} message={tasks.errorMessage} onRetry={tasks.retry} />}
+    {unscheduled.errorMessage && <RetryNotice loading={unscheduled.loading} message={unscheduled.errorMessage} onRetry={unscheduled.retry} />}
+    {actions.errorMessage && <p className="inline-error" role="alert">{actions.errorMessage}</p>}
     <Button className="planner-info" onClick={() => setShowInfo((value) => !value)} variant="ghost">{showInfo ? fr.plannerPage.hideAbout : fr.plannerPage.about}</Button>
     {showInfo && <p className="feature-help">{fr.plannerPage.calendarLimit}</p>}
     {!tasks.loading && <span className="sr-only"><Clock3 />La liste est filtrée sur la date sélectionnée.</span>}

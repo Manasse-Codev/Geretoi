@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createUserWithEmailAndPassword, deleteUser, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { disableNetwork, doc, getDoc, getDocFromServer, enableNetwork } from 'firebase/firestore';
+import { disableNetwork, doc, getDoc, getDocFromServer, enableNetwork, writeBatch } from 'firebase/firestore';
 import { auth, firebaseApp } from '@/lib/firebase';
 import type { Task } from '@/types/models';
 import {
-  completeTask, createTask, getHistoryPage, getTask, getTasksCollection, getTrashPage, purgeExpiredTasks, reopenTask,
+  completeTask, createTask, getCompletedTasksInPeriod, getHistoryPage, getTask, getTasksCollection, getTrashPage, purgeExpiredTasks, reopenTask,
   restoreTask, softDeleteTask, subscribeOverdueTasks, subscribeTodayTasks, subscribeUpcomingTasks,
 } from './taskRepository';
+import { completedCountLabel } from '@/features/stats/statsDisplay';
 import { createList, deleteList, getListsCollection, renameList, reorderLists } from '@/features/lists/listRepository';
 import { createTag, deleteTag, getTagsCollection, renameTag, reorderTags } from '@/features/tags/tagRepository';
 import { firestore } from '@/lib/firestore';
@@ -64,6 +65,21 @@ afterEach(async () => {
 });
 
 describe('dépôt des tâches sur les émulateurs Auth et Firestore', () => {
+  it('conserve une création hors ligne localement puis la synchronise au retour du réseau', async () => {
+    const uid = currentUid as string;
+    await disableNetwork(firestore);
+    try {
+      const task = await createTask(uid, { title: 'Créée sans réseau' }, new Date(), false);
+      expect((await getTask(uid, task.id)).title).toBe('Créée sans réseau');
+
+      await enableNetwork(firestore);
+      const serverSnapshot = await getDocFromServer(doc(getTasksCollection(uid), task.id));
+      expect(serverSnapshot.data()?.title).toBe('Créée sans réseau');
+    } finally {
+      await enableNetwork(firestore);
+    }
+  });
+
   it('crée, complète, rouvre, supprime en douceur et restaure une tâche', async () => {
     const uid = currentUid as string;
     const task = await createTask(uid, { title: 'Vérifier le dépôt' });
@@ -81,21 +97,6 @@ describe('dépôt des tâches sur les émulateurs Auth et Firestore', () => {
     expect((await getTrashPage(uid)).tasks.map((item) => item.id)).toContain(task.id);
     await restoreTask(uid, task.id);
     expect((await getTask(uid, task.id)).deletedAt).toBeNull();
-  });
-
-  it('conserve une création hors ligne localement puis la synchronise au retour du réseau', async () => {
-    const uid = currentUid as string;
-    await disableNetwork(firestore);
-    try {
-      const task = await createTask(uid, { title: 'Créée sans réseau' }, new Date(), false);
-      expect((await getTask(uid, task.id)).title).toBe('Créée sans réseau');
-
-      await enableNetwork(firestore);
-      const serverSnapshot = await getDocFromServer(doc(getTasksCollection(uid), task.id));
-      expect(serverSnapshot.data()?.title).toBe('Créée sans réseau');
-    } finally {
-      await enableNetwork(firestore);
-    }
   });
 
   it('alimente les requêtes temps réel Aujourd’hui et En retard', async () => {
@@ -118,6 +119,39 @@ describe('dépôt des tâches sur les émulateurs Auth et Firestore', () => {
     expect(todayResult.map((task) => task.id)).toContain(todayTask.id);
     expect(overdueResult.map((task) => task.id)).toContain(overdueTask.id);
     expect(upcomingResult.map((task) => task.id)).toContain(upcomingTask.id);
+  });
+
+  it('affiche 100+ quand la période contient plus de tâches terminées que la limite des statistiques', async () => {
+    const uid = currentUid as string;
+    const now = new Date();
+    const batch = writeBatch(firestore);
+    for (let index = 0; index < 120; index += 1) {
+      const reference = doc(getTasksCollection(uid));
+      batch.set(reference, {
+        id: reference.id,
+        title: `Tâche terminée ${index}`,
+        status: 'done',
+        completedAt: now,
+        deletedAt: null,
+        dueDate: null,
+        priority: 3,
+        listId: null,
+        tags: [],
+        links: [],
+        subtasks: [],
+        recurrence: null,
+        reminders: [],
+        createdAt: now,
+        updatedAt: now,
+      } satisfies Task);
+    }
+    await batch.commit();
+
+    const result = await getCompletedTasksInPeriod(uid, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), now);
+    expect(result.tasks).toHaveLength(100);
+    expect(result.hasMore).toBe(true);
+    expect(completedCountLabel(result.tasks.length, result.hasMore)).toBe('100+');
+    expect(completedCountLabel(result.tasks.length, result.hasMore)).not.toBe('120');
   });
 
   it('pagine l’historique par 20 tâches terminées', async () => {

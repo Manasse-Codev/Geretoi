@@ -1,13 +1,17 @@
 import { fileURLToPath, URL } from 'node:url';
-import { defineConfig } from 'vite';
+import process from 'node:process';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+  return ({
   plugins: [
     react(),
     VitePWA({
       registerType: 'prompt',
+      devOptions: { enabled: command === 'serve' && env.VITE_ENABLE_SW_DEV === 'true', type: 'module' },
       includeAssets: ['icons/*'],
       manifest: {
         name: 'DayFlow', short_name: 'DayFlow', description: 'Organisez vos journées avec DayFlow.', lang: 'fr',
@@ -22,8 +26,12 @@ export default defineConfig({
           { name: "Aujourd'hui", short_name: "Aujourd'hui", url: '/', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
         ],
       },
-      workbox: { navigateFallback: '/index.html', globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'] },
+      workbox: {
+        navigateFallback: '/index.html',
+        globPatterns: command === 'build' ? ['**/*.{js,css,html,ico,png,svg,woff2}'] : [],
+      },
     }),
   ],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  });
 });

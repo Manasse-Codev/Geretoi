@@ -3,6 +3,7 @@ import { fr } from '@/i18n/fr';
 import { useAuth } from '@/features/auth/useAuth';
 import type { Task } from '@/types/models';
 import { DataError, toDataError } from './dataErrors';
+import { setSyncError } from '@/lib/syncStatus';
 import {
   getHistoryPage, getTrashPage, subscribeOverdueTasks, subscribeTasksInRange, subscribeTodayTasks, subscribeUpcomingTasks, subscribeUnscheduledTasks,
 } from './taskRepository';
@@ -16,6 +17,7 @@ export interface TaskCollectionState {
   errorMessage: string | null;
   isEmpty: boolean;
   sync: SyncMetadata;
+  retry: () => void;
 }
 
 function useLiveTasks(kind: 'today' | 'overdue' | 'upcoming', date?: Date): TaskCollectionState {
@@ -25,6 +27,7 @@ function useLiveTasks(kind: 'today' | 'overdue' | 'upcoming', date?: Date): Task
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<DataError | null>(null);
   const [sync, setSync] = useState(emptySync);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -37,16 +40,17 @@ function useLiveTasks(kind: 'today' | 'overdue' | 'upcoming', date?: Date): Task
       if (!active) return;
       setTasks(nextTasks); setSync(nextSync); setLoading(false);
     };
-    const onError = (caught: unknown) => { if (active) { const dataError = toDataError(caught); setError(dataError); setSync((current) => ({ ...current, errorCode: dataError.code })); setLoading(false); } };
+    const onError = (caught: unknown) => { if (active) { const dataError = toDataError(caught); setSyncError(dataError.code); setError(dataError); setSync((current) => ({ ...current, errorCode: dataError.code })); setLoading(false); } };
     const unsubscribe = kind === 'today'
       ? subscribeTodayTasks(user.uid, referenceDate, onData, onError)
       : kind === 'overdue'
         ? subscribeOverdueTasks(user.uid, referenceDate, onData, onError)
         : subscribeUpcomingTasks(user.uid, referenceDate, onData, onError);
     return () => { active = false; unsubscribe(); };
-  }, [kind, referenceDate, user]);
+  }, [kind, referenceDate, reloadKey, user]);
 
-  return { tasks, loading, error, errorMessage: error ? fr.data.errors[error.code] : null, isEmpty: !loading && tasks.length === 0, sync };
+  const retry = useCallback(() => { setLoading(true); setReloadKey((current) => current + 1); }, []);
+  return { tasks, loading, error, errorMessage: error ? fr.data.errors[error.code] : null, isEmpty: !loading && tasks.length === 0, sync, retry };
 }
 
 export const useTodayTasks = (date?: Date): TaskCollectionState => useLiveTasks('today', date);
@@ -59,12 +63,14 @@ function useCustomLiveTasks(subscribe: (uid: string, onData: (tasks: Task[], syn
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<DataError | null>(null);
   const [sync, setSync] = useState(emptySync);
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
     if (!user) { setTasks([]); setLoading(false); setError(new DataError('unauthenticated')); setSync(emptySync); return undefined; }
     setTasks([]); setLoading(true); setError(null); setSync(emptySync);
-    return subscribe(user.uid, (items, status) => { setTasks(items); setSync(status); setError(null); setLoading(false); }, (caught) => { const dataError = toDataError(caught); setError(dataError); setSync((current) => ({ ...current, errorCode: dataError.code })); setLoading(false); });
-  }, [subscribe, user]);
-  return { tasks, loading, error, errorMessage: error ? fr.data.errors[error.code] : null, isEmpty: !loading && tasks.length === 0, sync };
+    return subscribe(user.uid, (items, status) => { setTasks(items); setSync(status); setError(null); setLoading(false); }, (caught) => { const dataError = toDataError(caught); setSyncError(dataError.code); setError(dataError); setSync((current) => ({ ...current, errorCode: dataError.code })); setLoading(false); });
+  }, [reloadKey, subscribe, user]);
+  const retry = useCallback(() => { setLoading(true); setReloadKey((current) => current + 1); }, []);
+  return { tasks, loading, error, errorMessage: error ? fr.data.errors[error.code] : null, isEmpty: !loading && tasks.length === 0, sync, retry };
 }
 
 export function useTasksInRange(start: Date, end: Date): TaskCollectionState {
@@ -112,7 +118,7 @@ function usePaginatedTasks(kind: 'history' | 'trash'): PaginatedTaskState {
       setTasks((current) => reset ? page.tasks : [...current, ...page.tasks]);
       cursor.current = page.cursor; setHasMore(page.hasMore); setSync(page.sync);
     } catch (caught: unknown) {
-      if (request === requestId.current) { const dataError = toDataError(caught); setError(dataError); setSync((current) => ({ ...current, errorCode: dataError.code })); }
+      if (request === requestId.current) { const dataError = toDataError(caught); setSyncError(dataError.code); setError(dataError); setSync((current) => ({ ...current, errorCode: dataError.code })); }
     } finally {
       if (request === requestId.current) { setLoading(false); inFlight.current = false; }
     }
@@ -126,7 +132,8 @@ function usePaginatedTasks(kind: 'history' | 'trash'): PaginatedTaskState {
   }, [loadPage]);
 
   const loadMore = useCallback(() => loadPage(false), [loadPage]);
-  return { tasks, loading, error, errorMessage: error ? fr.data.errors[error.code] : null, isEmpty: !loading && tasks.length === 0, sync, hasMore, loadMore };
+  const retry = useCallback(() => { void loadPage(true); }, [loadPage]);
+  return { tasks, loading, error, errorMessage: error ? fr.data.errors[error.code] : null, isEmpty: !loading && tasks.length === 0, sync, hasMore, loadMore, retry };
 }
 
 export const useHistory = (): PaginatedTaskState => usePaginatedTasks('history');

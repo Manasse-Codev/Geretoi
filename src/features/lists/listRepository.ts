@@ -1,6 +1,7 @@
 import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore';
 import type { CollectionReference, QuerySnapshot } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
+import { shareSubscription } from '@/lib/sharedSubscription';
 import type { List, ListInput } from '@/types/models';
 import type { SyncMetadata } from '@/features/tasks/taskRepository';
 import { listConverter } from './listConverter';
@@ -15,9 +16,10 @@ function toSyncMetadata(snapshot: QuerySnapshot<List>): SyncMetadata {
 }
 
 export function subscribeLists(uid: string, onData: (lists: List[], sync: SyncMetadata) => void, onError: (error: unknown) => void): () => void {
-  return onSnapshot(query(getListsCollection(uid), orderBy('order', 'asc'), limit(LIST_LIMIT)), { includeMetadataChanges: true }, (snapshot) => {
-    onData(snapshot.docs.map((item) => item.data()), toSyncMetadata(snapshot));
-  }, onError);
+  const queryRef = query(getListsCollection(uid), orderBy('order', 'asc'), limit(LIST_LIMIT));
+  return shareSubscription<{ lists: List[]; sync: SyncMetadata }>(`${uid}:lists`, (next, error) => onSnapshot(queryRef, { includeMetadataChanges: true }, (snapshot) => {
+    next({ lists: snapshot.docs.map((item) => item.data()), sync: toSyncMetadata(snapshot) });
+  }, error), (value) => onData(value.lists, value.sync), onError);
 }
 
 export async function createList(uid: string, input: ListInput, now = new Date()): Promise<List> {

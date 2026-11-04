@@ -1,9 +1,8 @@
 import { lazy, Suspense } from 'react';
 import type { ReactNode } from 'react';
-import { createBrowserRouter, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
 import { AuthGate } from '@/app/AuthGate';
 import { RouteLoading } from '@/app/RouteLoading';
-import { fr } from '@/i18n/fr';
 const AppLayout = lazy(() => import('@/app/layout/AppLayout').then((module) => ({ default: module.AppLayout })));
 const LoginPage = lazy(() => import('@/features/auth/LoginPage').then((module) => ({ default: module.LoginPage })));
 const TodayPage = lazy(() => import('@/features/today/TodayPage').then((module) => ({ default: module.TodayPage })));
@@ -32,8 +31,8 @@ const routes: RouteObject[] = [
       { path: '/trash', element: suspended(<HistoryPage trashOnly />) },
       { path: '/settings', element: suspended(<SettingsPage />) },
       { path: '/settings/delete-account', element: suspended(<AccountDeletionPage />) },
-      { path: '/focus', element: <main className="screen"><h1>{fr.pages.focus}</h1><p className="feature-help">Le minuteur Focus n’est pas encore relié à une fonctionnalité de session.</p></main> },
       { path: '/new', element: suspended(<TaskFormPage />) },
+      { path: '*', element: <Navigate replace to="/" /> },
     ],
   },
 ];

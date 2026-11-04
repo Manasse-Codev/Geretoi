@@ -1,10 +1,11 @@
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
+  collection, deleteDoc, doc, getDoc, getDocs, getDocsFromServer, limit, onSnapshot, orderBy, query,
   startAfter, Timestamp, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 import type { CollectionReference, QueryDocumentSnapshot, QuerySnapshot } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
 import { clearSyncError, settleWrite } from '@/lib/syncStatus';
+import { shareSubscription } from '@/lib/sharedSubscription';
 import { getLocalDayBounds } from '@/lib/dates';
 import type { Task, TaskInput, TaskUpdate } from '@/types/models';
 import { DataError } from './dataErrors';
@@ -19,6 +20,8 @@ const PURGE_GRACE_MS = 60 * 1000;
 export interface SyncMetadata { fromCache: boolean; hasPendingWrites: boolean; isOffline: boolean; errorCode?: import('./dataErrors').DataErrorCode }
 export interface HistoryPage { tasks: Task[]; cursor: QueryDocumentSnapshot<Task> | null; hasMore: boolean; sync: SyncMetadata }
 export interface TrashPage { tasks: Task[]; cursor: QueryDocumentSnapshot<Task> | null; hasMore: boolean; sync: SyncMetadata }
+export interface StatsTasksResult { tasks: Task[]; hasMore: boolean }
+export const STATS_TASK_LIMIT = 100;
 
 export function getTasksCollection(uid: string): CollectionReference<Task> {
   return collection(firestore, 'users', uid, 'tasks').withConverter(taskConverter);
@@ -48,10 +51,11 @@ function activeTasksForDay(uid: string, date: Date, range: 'today' | 'overdue' |
 }
 
 function subscribeTasks(uid: string, date: Date, range: 'today' | 'overdue' | 'upcoming', onData: (tasks: Task[], sync: SyncMetadata) => void, onError: (error: unknown) => void): () => void {
-  return onSnapshot(activeTasksForDay(uid, date, range), { includeMetadataChanges: true }, (snapshot) => {
-    onData(snapshot.docs.map((item) => item.data()), syncMetadata(snapshot));
+  const key = `${uid}:tasks:${range}:${date.toISOString().slice(0, 10)}`;
+  return shareSubscription<{ tasks: Task[]; sync: SyncMetadata }>(key, (next, error) => onSnapshot(activeTasksForDay(uid, date, range), { includeMetadataChanges: true }, (snapshot) => {
+    next({ tasks: snapshot.docs.map((item) => item.data()), sync: syncMetadata(snapshot) });
     if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) clearSyncError();
-  }, onError);
+  }, error), (value) => onData(value.tasks, value.sync), onError);
 }
 
 export const subscribeTodayTasks = (uid: string, date: Date, onData: (tasks: Task[], sync: SyncMetadata) => void, onError: (error: unknown) => void) => subscribeTasks(uid, date, 'today', onData, onError);
@@ -60,12 +64,19 @@ export const subscribeUpcomingTasks = (uid: string, date: Date, onData: (tasks: 
 
 export function subscribeTasksInRange(uid: string, start: Date, end: Date, onData: (tasks: Task[], sync: SyncMetadata) => void, onError: (error: unknown) => void): () => void {
   const queryRef = query(getTasksCollection(uid), where('status', '==', 'active'), where('deletedAt', '==', null), where('dueDate', '>=', getLocalDayBounds(start).start), where('dueDate', '<=', getLocalDayBounds(end).end), orderBy('dueDate', 'asc'), limit(TASK_QUERY_LIMIT));
-  return onSnapshot(queryRef, { includeMetadataChanges: true }, (snapshot) => { onData(snapshot.docs.map((item) => item.data()), syncMetadata(snapshot)); if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) clearSyncError(); }, onError);
+  const key = `${uid}:tasks:range:${start.toISOString()}:${end.toISOString()}`;
+  return shareSubscription<{ tasks: Task[]; sync: SyncMetadata }>(key, (next, error) => onSnapshot(queryRef, { includeMetadataChanges: true }, (snapshot) => {
+    next({ tasks: snapshot.docs.map((item) => item.data()), sync: syncMetadata(snapshot) });
+    if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) clearSyncError();
+  }, error), (value) => onData(value.tasks, value.sync), onError);
 }
 
 export function subscribeUnscheduledTasks(uid: string, onData: (tasks: Task[], sync: SyncMetadata) => void, onError: (error: unknown) => void): () => void {
   const queryRef = query(getTasksCollection(uid), where('status', '==', 'active'), where('deletedAt', '==', null), where('dueDate', '==', null), orderBy('createdAt', 'desc'), limit(TASK_QUERY_LIMIT));
-  return onSnapshot(queryRef, { includeMetadataChanges: true }, (snapshot) => { onData(snapshot.docs.map((item) => item.data()), syncMetadata(snapshot)); if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) clearSyncError(); }, onError);
+  return shareSubscription<{ tasks: Task[]; sync: SyncMetadata }>(`${uid}:tasks:unscheduled`, (next, error) => onSnapshot(queryRef, { includeMetadataChanges: true }, (snapshot) => {
+    next({ tasks: snapshot.docs.map((item) => item.data()), sync: syncMetadata(snapshot) });
+    if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) clearSyncError();
+  }, error), (value) => onData(value.tasks, value.sync), onError);
 }
 
 export async function createTask(uid: string, input: TaskInput, now = new Date(), waitForServer = true): Promise<Task> {
@@ -150,6 +161,23 @@ export async function getHistoryPage(uid: string, cursor: QueryDocumentSnapshot<
   const snapshot = await getDocs(historyQuery);
   const pageDocs = snapshot.docs.slice(0, PAGE_SIZE);
   return { tasks: pageDocs.map((item) => item.data()), cursor: pageDocs.at(-1) ?? null, hasMore: snapshot.docs.length > PAGE_SIZE, sync: syncMetadata(snapshot) };
+}
+
+export async function getCompletedTasksInPeriod(uid: string, start: Date, end: Date): Promise<StatsTasksResult> {
+  const statsQuery = query(
+    getTasksCollection(uid),
+    where('status', '==', 'done'),
+    where('deletedAt', '==', null),
+    where('completedAt', '>=', start),
+    where('completedAt', '<=', end),
+    orderBy('completedAt', 'desc'),
+    limit(STATS_TASK_LIMIT + 1),
+  );
+  const snapshot = await getDocsFromServer(statsQuery);
+  return {
+    tasks: snapshot.docs.slice(0, STATS_TASK_LIMIT).map((item) => item.data()),
+    hasMore: snapshot.docs.length > STATS_TASK_LIMIT,
+  };
 }
 
 export async function getTrashPage(uid: string, cursor: QueryDocumentSnapshot<Task> | null = null): Promise<TrashPage> {

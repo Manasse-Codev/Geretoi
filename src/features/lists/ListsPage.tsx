@@ -3,8 +3,8 @@ import { ArrowDown, ArrowUp, FolderOpen, ListChecks, Plus, Tag, Trash2 } from 'l
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
-import { SyncIndicator } from '@/components/SyncIndicator';
 import { TextField } from '@/components/TextField';
+import { RetryNotice } from '@/components/RetryNotice';
 import { useAuth } from '@/features/auth/useAuth';
 import { useLists, createList, deleteList, renameList, reorderLists } from '@/features/lists';
 import { createTag, deleteTag, renameTag, reorderTags, useTags } from '@/features/tags';
@@ -47,9 +47,8 @@ export function ListsPage() {
     <header className="screen-heading"><p className="eyebrow"><ListChecks size={18} />{fr.listsPage.title}</p><h1>{fr.pages.lists}</h1><p className="muted">{fr.listsPage.description}</p></header>
     <div className="segmented collection-tabs" role="group" aria-label={fr.listsPage.type}><button aria-pressed={tab === 'lists'} className="filter-chip surface-raised" onClick={() => setTab('lists')} type="button"><FolderOpen size={16} />{fr.listsPage.lists}</button><button aria-pressed={tab === 'tags'} className="filter-chip surface-raised" onClick={() => setTab('tags')} type="button"><Tag size={16} />{fr.listsPage.tags}</button></div>
     <Card className="create-collection"><TextField label={tab === 'lists' ? fr.listsPage.listName : fr.listsPage.tagName} onChange={(event) => setDraft(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void add(); } }} placeholder={tab === 'lists' ? fr.listsPage.listExample : fr.listsPage.tagExample} value={draft} /><Button onClick={() => void add()} variant="primary"><Plus size={18} />{fr.listsPage.create}</Button></Card>
-    {(tab === 'lists' ? listsState.sync : tagsState.sync) && <SyncIndicator sync={tab === 'lists' ? listsState.sync : tagsState.sync} />}
     {loading && entries.length === 0 ? <div className="task-skeleton surface-raised" aria-busy="true" /> : entries.length === 0 ? <EmptyState title={tab === 'lists' ? fr.listsPage.noLists : fr.listsPage.noTags} description={fr.pagesContent.emptyLists} /> : <div className="collection-list">{entries.map((entry, index) => <Card className="collection-row" key={entry.id}>{editing === entry.id ? <TextField label={fr.listsPage.rename} defaultValue={entry.name} onBlur={(event) => void changeName(entry.id, event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter') void changeName(entry.id, event.currentTarget.value); if (event.key === 'Escape') setEditing(null); }} /> : <button className="collection-name" onClick={() => setEditing(entry.id)} type="button">{tab === 'lists' ? <FolderOpen size={19} /> : <Tag size={19} />}{entry.name}<span>{fr.listsPage.edit}</span></button>}<div className="collection-actions"><button aria-label={`${fr.listsPage.moveUp} ${entry.name}`} className="icon-button surface-raised" disabled={index === 0} onClick={() => void move(index, -1)} type="button"><ArrowUp size={17} /></button><button aria-label={`${fr.listsPage.moveDown} ${entry.name}`} className="icon-button surface-raised" disabled={index === entries.length - 1} onClick={() => void move(index, 1)} type="button"><ArrowDown size={17} /></button><button aria-label={`${fr.listsPage.delete} ${entry.name}`} className="icon-button surface-raised" onClick={() => void remove(entry.id, entry.name)} type="button"><Trash2 size={17} /></button></div></Card>)}</div>}
-    {stateError && <p className="inline-error" role="alert">{stateError}</p>}
+    {stateError && <RetryNotice loading={loading} message={stateError} onRetry={() => (tab === 'lists' ? listsState.retry : tagsState.retry)()} />}
     {error && <p className="inline-error" role="alert">{error}</p>}
   </div>;
 }

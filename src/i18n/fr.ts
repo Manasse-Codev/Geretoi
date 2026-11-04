@@ -27,6 +27,17 @@ export const fr = {
     4: { label: 'Basse', icon: 'arrow-down' },
   },
   placeholders: { toggle: 'Interrupteur', sheet: 'Panneau' },
+  pwa: {
+    updateAvailable: 'Une nouvelle version est prête.',
+    updateNow: 'Mettre à jour',
+    updateLater: 'Plus tard',
+    unsavedUpdate: 'Des modifications ne sont pas enregistrées. Mettre à jour maintenant et les perdre ?',
+  },
+  actions: { retry: 'Réessayer' },
+  statsEmpty: {
+    title: 'Pas encore de statistiques',
+    description: 'Les résultats apparaîtront après vos premières tâches terminées.',
+  },
   auth: {
     loginTitle: 'Connectez-vous à votre espace',
     createAccountTitle: 'Créer votre compte',
@@ -126,8 +137,9 @@ export const fr = {
     todayHeading: "Aujourd'hui", yesterday: 'Hier', task: 'tâche',
   },
   statsPage: {
-    title: 'Statistiques', summary: 'Synthèse d’activité', scope: 'Votre activité en un coup d’œil.',
-    week: 'Cette semaine', days30: '30 jours', completedRate: 'Tâches terminées', estimatedTime: 'Temps estimé',
+    title: 'Statistiques', summary: 'Synthèse d’activité', scope: 'Résultats de la période sélectionnée.',
+    periodLabel: 'Période des statistiques', week: '7 derniers jours', days30: '30 derniers jours',
+    overLimit: (limit: number) => `${limit}+`, completedRate: 'Tâches terminées', estimatedTime: 'Temps estimé',
     inRange: 'Sur la période', complete: 'Terminées', activeToday: 'Actives aujourd’hui',
     recentActivity: 'Activité récente', perDay: 'Tâches terminées par jour', perDayShort: 'tâche/jour',
     detailHistory: 'Historique détaillé', loadMoreStats: 'Charger plus',

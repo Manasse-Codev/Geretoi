@@ -5,10 +5,8 @@ import { ArrowRight, CalendarDays, Check, Cloud, Download, LogOut, Palette, Tras
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { SegmentedControl } from '@/components/SegmentedControl';
-import { SyncIndicator } from '@/components/SyncIndicator';
 import { Toast } from '@/components/Toast';
 import { useAuth } from '@/features/auth/useAuth';
-import { useTodayTasks } from '@/features/tasks';
 import { downloadCalendar, downloadJson, exportAccountData } from '@/features/settings/exportData';
 import { usePreferences } from '@/features/settings/usePreferences';
 import { fr } from '@/i18n/fr';
@@ -17,7 +15,6 @@ export function SettingsPage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { preferences, update } = usePreferences();
-  const today = useTodayTasks();
   const [toast, setToast] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -54,7 +51,7 @@ export function SettingsPage() {
   ];
   return <div className="screen screen--settings">
     <header className="screen-heading"><p className="eyebrow">DayFlow</p><h1>{fr.pages.settings}</h1><p className="muted">{fr.settingsPage.description}</p></header>
-    <Card className="profile-card"><span className="profile-avatar"><UserRound size={23} /></span><div className="profile-card__identity"><strong>{user?.displayName || fr.settingsPage.account}</strong><span>{user?.email}</span><SyncIndicator sync={today.sync} /></div></Card>
+    <Card className="profile-card"><span className="profile-avatar"><UserRound size={23} /></span><div className="profile-card__identity"><strong>{user?.displayName || fr.settingsPage.account}</strong><span>{user?.email}</span></div></Card>
     <SettingsSection icon={<Palette size={17} />} title={fr.settingsPage.appearance}>
       <div className="settings-row settings-row--stack"><span>{fr.settingsPage.theme}</span><SegmentedControl label={fr.settingsPage.theme} onValueChange={(value) => void save('theme', value as 'light' | 'dark' | 'auto')} options={themeOptions} value={preferences.theme} /></div>
       <div className="settings-row"><span>{fr.settingsPage.density}</span><SegmentedControl label={fr.settingsPage.density} onValueChange={(value) => void save('density', value as 'compact' | 'comfortable')} options={[{ value: 'compact', label: fr.settingsPage.compact }, { value: 'comfortable', label: fr.settingsPage.comfortable }]} value={preferences.density} /></div>
@@ -65,8 +62,6 @@ export function SettingsPage() {
     </SettingsSection>
     <SettingsSection icon={<Cloud size={17} />} title={fr.settingsPage.accountSync}>
       <div className="settings-row"><span className="settings-row__icon">{provider === 'Google' ? 'G' : <UserRound size={17} />}</span><span className="settings-row__label">{fr.settingsPage.account} {provider}<small>{user?.email}</small></span><strong className="connected-state"><Check size={14} />{fr.settingsPage.connected}</strong></div>
-      <div className="settings-row"><span>{fr.settingsPage.lastSync}</span><span>{today.sync.isOffline ? fr.settingsPage.offline : today.sync.hasPendingWrites ? fr.settingsPage.pending : fr.settingsPage.connected}</span></div>
-      <div className="settings-row"><span>{fr.settingsPage.offlineMode}</span><span>{today.sync.fromCache ? fr.settingsPage.localData : fr.settingsPage.available}</span></div>
     </SettingsSection>
     <SettingsSection icon={<Download size={17} />} title={fr.settingsPage.data}>
       <button className="settings-row settings-row--button" disabled={busy} onClick={() => void exportJson()} type="button"><span><Download size={17} />{fr.settingsPage.export}</span><span>JSON <ArrowRight size={16} /></span></button>

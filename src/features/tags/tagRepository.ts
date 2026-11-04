@@ -1,6 +1,7 @@
 import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore';
 import type { CollectionReference, QuerySnapshot } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
+import { shareSubscription } from '@/lib/sharedSubscription';
 import type { Tag, TagInput } from '@/types/models';
 import type { SyncMetadata } from '@/features/tasks/taskRepository';
 import { tagConverter } from './tagConverter';
@@ -15,9 +16,10 @@ function toSyncMetadata(snapshot: QuerySnapshot<Tag>): SyncMetadata {
 }
 
 export function subscribeTags(uid: string, onData: (tags: Tag[], sync: SyncMetadata) => void, onError: (error: unknown) => void): () => void {
-  return onSnapshot(query(getTagsCollection(uid), orderBy('order', 'asc'), limit(TAG_LIMIT)), { includeMetadataChanges: true }, (snapshot) => {
-    onData(snapshot.docs.map((item) => item.data()), toSyncMetadata(snapshot));
-  }, onError);
+  const queryRef = query(getTagsCollection(uid), orderBy('order', 'asc'), limit(TAG_LIMIT));
+  return shareSubscription<{ tags: Tag[]; sync: SyncMetadata }>(`${uid}:tags`, (next, error) => onSnapshot(queryRef, { includeMetadataChanges: true }, (snapshot) => {
+    next({ tags: snapshot.docs.map((item) => item.data()), sync: toSyncMetadata(snapshot) });
+  }, error), (value) => onData(value.tags, value.sync), onError);
 }
 
 export async function createTag(uid: string, input: TagInput, now = new Date()): Promise<Tag> {
