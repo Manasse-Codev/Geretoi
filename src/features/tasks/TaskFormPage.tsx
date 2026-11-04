@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Bell, CalendarDays, ChevronDown, Flame, FolderOpen, Plus, SlidersHorizontal, Star, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bell, CalendarDays, ChevronDown, Flame, FolderOpen, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -33,7 +33,6 @@ export function TaskFormPage() {
   const [draftSubtask, setDraftSubtask] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState('');
   const priorities: TaskPriority[] = [4, 3, 2, 1];
 
   function makeDueDate(value: string) {
@@ -76,8 +75,6 @@ export function TaskFormPage() {
         <label className="form-select"><span><FolderOpen size={17} />{fr.taskForm.list}</span><select onChange={(event) => setListId(event.currentTarget.value)} value={listId}><option value="">{fr.task.unknownList}</option>{lists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}</select><ChevronDown size={16} /></label>
         <label className="form-select"><span><Bell size={17} />{fr.taskForm.time}</span><input aria-label={fr.taskForm.time} onChange={(event) => setTime(event.currentTarget.value)} type="time" value={time} /></label>
       </div>
-      <button aria-expanded={Boolean(notice)} className="feature-unavailable" onClick={() => setNotice((value) => value ? '' : fr.taskForm.topThreeInfo)} type="button"><Star size={17} />{fr.taskForm.topThree} <span>{fr.taskForm.unavailable}</span></button>
-      {notice && <p className="feature-help" role="status">{notice}</p>}
       <Card className="task-details">
         <button aria-expanded={detailsOpen} className="accordion-trigger" onClick={() => setDetailsOpen((value) => !value)} type="button"><span><SlidersHorizontal size={19} />{fr.taskForm.moreDetails}</span><ChevronDown className={detailsOpen ? 'accordion-chevron is-open' : 'accordion-chevron'} size={18} /></button>
         {detailsOpen && <div className="task-details__body">
@@ -87,7 +84,6 @@ export function TaskFormPage() {
           <fieldset className="choice-field"><legend>{fr.task.priority}</legend><div className="choice-row">{priorities.map((value) => <button aria-pressed={priority === value} className={`priority-choice priority-choice--${value}`} key={value} onClick={() => setPriority(value)} type="button">{fr.priorities[value].label}</button>)}</div></fieldset>
           {tags.length > 0 && <fieldset className="choice-field"><legend>{fr.taskForm.tags}</legend><div className="choice-row">{tags.map((tag) => <button aria-pressed={selectedTags.includes(tag.id)} className="filter-chip surface-raised" key={tag.id} onClick={() => setSelectedTags((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])} type="button">{tag.name}</button>)}</div></fieldset>}
           <fieldset className="choice-field"><legend>Sous-tâches ({subtasks.filter((item) => item.done).length}/{subtasks.length})</legend>{subtasks.map((subtask) => <div className="subtask-edit-row" key={subtask.id}><Checkbox checked={subtask.done} label={subtask.title} onCheckedChange={(done) => setSubtasks((items) => items.map((item) => item.id === subtask.id ? { ...item, done } : item))} /><span className={subtask.done ? 'is-done' : ''}>{subtask.title}</span><button aria-label={`Retirer ${subtask.title}`} className="icon-button" onClick={() => setSubtasks((items) => items.filter((item) => item.id !== subtask.id))} type="button"><Trash2 size={16} /></button></div>)}<div className="add-subtask-row"><input aria-label={fr.taskForm.subtaskPlaceholder} className="text-control" onChange={(event) => setDraftSubtask(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addSubtask(); } }} placeholder={fr.taskForm.subtaskPlaceholder} value={draftSubtask} /><Button aria-label={fr.taskForm.addSubtask} onClick={addSubtask}><Plus size={17} /></Button></div></fieldset>
-          <p className="feature-help">{fr.taskForm.unavailableRules}</p>
         </div>}
       </Card>
       {error && <p className="inline-error" role="alert">{error}</p>}

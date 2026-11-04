@@ -73,11 +73,22 @@ describe('règles Firestore (émulateur)', () => {
     const db = testEnvironment.authenticatedContext('owner').firestore();
     const profile = doc(db, 'users/owner/profile/preferences');
     await assertSucceeds(setDoc(profile, {
-      theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h',
+      theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h', density: 'comfortable',
     }));
     await assertSucceeds(setDoc(doc(db, 'users/owner/lists/list-1'), { name: 'Personnel' }));
     await assertSucceeds(setDoc(doc(db, 'users/owner/tags/tag-1'), { name: 'Maison' }));
     await assertFails(getDoc(doc(testEnvironment.authenticatedContext('visitor').firestore(), 'users/owner/profile/preferences')));
+  });
+
+  it('valide la densité du profil', async () => {
+    const db = testEnvironment.authenticatedContext('owner').firestore();
+    const profile = doc(db, 'users/owner/profile/preferences');
+    await assertSucceeds(setDoc(profile, {
+      theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h', density: 'compact',
+    }));
+    await assertFails(setDoc(profile, {
+      theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h', density: 'tiny',
+    }));
   });
 
   it.each([

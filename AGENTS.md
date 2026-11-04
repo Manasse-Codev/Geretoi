@@ -36,6 +36,18 @@ Style néomorphisme (soft UI) : surfaces monochromes, ombres douces doubles, él
 - Alias d'import @/ pointant vers src/.
 - Textes de l'interface en français, centralisés dans src/i18n pour permettre l'ajout de l'anglais plus tard.
 
+## Interface
+- Aucune mention technique n'est visible par l'utilisateur.
+- Une fonction qui n'est pas prête est masquée : pas de texte « indisponible », « bientôt » ou « non fourni ».
+- Les notes de développement vont dans docs/ ou dans des commentaires de code, jamais dans l'interface.
+- En production, les erreurs restent simples et compréhensibles ; les détails techniques sont réservés au mode développement.
+- Les libellés sont courts, en français, et centralisés dans src/i18n/fr.ts.
+- Ne pas afficher de détails sur les services, la structure des données ou les limites internes.
+- Une option visible doit fonctionner et conserver son état quand cela est attendu.
+- Les états d'erreur indiquent une action utile sans jargon.
+- Les composants de démonstration et leurs libellés ne doivent pas apparaître dans les parcours de production.
+- Vérifier les chaînes visibles sur tous les écrans après toute modification d'interface.
+
 ## Qualité
 Lancer lint, vérification de types, tests et build avant de conclure une tâche. Ne pas ajouter de dépendance sans la justifier dans le message final. Ne jamais commit de secrets ni de fichier .env.
 

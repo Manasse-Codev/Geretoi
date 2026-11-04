@@ -3,9 +3,10 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/features/auth/useAuth';
 import { firestore } from '@/lib/firestore';
 import type { UserPreferences } from '@/types/models';
+import { preferencesConverter } from '@/features/settings/preferencesConverter';
 
 export const defaultPreferences: UserPreferences = {
-  theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h',
+  theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h', density: 'comfortable',
 };
 
 export function usePreferences() {
@@ -17,8 +18,8 @@ export function usePreferences() {
   useEffect(() => {
     if (!user) { setPreferences(defaultPreferences); setLoading(false); return undefined; }
     setLoading(true);
-    return onSnapshot(doc(firestore, 'users', user.uid, 'profile', 'preferences'), (snapshot) => {
-      if (snapshot.exists()) setPreferences({ ...defaultPreferences, ...snapshot.data() } as UserPreferences);
+    return onSnapshot(doc(firestore, 'users', user.uid, 'profile', 'preferences').withConverter(preferencesConverter), (snapshot) => {
+      if (snapshot.exists()) setPreferences({ ...defaultPreferences, ...snapshot.data() });
       setLoading(false); setError(null);
     }, (caught: Error) => { setError(caught); setLoading(false); });
   }, [user]);
@@ -26,7 +27,7 @@ export function usePreferences() {
   const update = useCallback(async (changes: Partial<UserPreferences>) => {
     if (!user) throw new Error('unauthenticated');
     const nextPreferences = { ...preferences, ...changes };
-    await setDoc(doc(firestore, 'users', user.uid, 'profile', 'preferences'), nextPreferences);
+    await setDoc(doc(firestore, 'users', user.uid, 'profile', 'preferences').withConverter(preferencesConverter), nextPreferences);
   }, [preferences, user]);
 
   return { preferences, loading, error, update };

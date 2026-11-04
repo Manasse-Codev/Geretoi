@@ -90,12 +90,13 @@ service cloud.firestore {
 
     function validPreferences(preferences) {
       return preferences is map &&
-        preferences.keys().hasOnly(['theme', 'language', 'firstDayOfWeek', 'timeFormat']) &&
-        preferences.keys().hasAll(['theme', 'language', 'firstDayOfWeek', 'timeFormat']) &&
+        preferences.keys().hasOnly(['theme', 'language', 'firstDayOfWeek', 'timeFormat', 'density']) &&
+        preferences.keys().hasAll(['theme', 'language', 'firstDayOfWeek', 'timeFormat', 'density']) &&
         preferences.theme in ['light', 'dark', 'auto'] &&
         preferences.language in ['fr', 'en'] &&
         preferences.firstDayOfWeek in ['monday', 'sunday'] &&
-        preferences.timeFormat in ['12h', '24h'];
+        preferences.timeFormat in ['12h', '24h'] &&
+        preferences.density in ['compact', 'comfortable'];
     }
 
     match /users/{uid}/profile/{profileId} {

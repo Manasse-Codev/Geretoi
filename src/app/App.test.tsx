@@ -17,8 +17,8 @@ vi.mock('@/features/auth/useAuth', () => ({
 
 const { sync } = vi.hoisted(() => ({ sync: { fromCache: false, hasPendingWrites: false, isOffline: false } }));
 vi.mock('@/features/settings/usePreferences', () => ({
-  defaultPreferences: { theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h' },
-  usePreferences: () => ({ preferences: { theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h' }, loading: false, error: null, update: async () => undefined }),
+  defaultPreferences: { theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h', density: 'comfortable' },
+  usePreferences: () => ({ preferences: { theme: 'auto', language: 'fr', firstDayOfWeek: 'monday', timeFormat: '24h', density: 'comfortable' }, loading: false, error: null, update: async () => undefined }),
 }));
 vi.mock('@/features/tasks', () => ({
   useTodayTasks: () => ({ tasks: [], loading: false, error: null, errorMessage: null, isEmpty: true, sync }),

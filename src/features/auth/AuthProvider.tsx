@@ -15,6 +15,7 @@ const defaultPreferences: UserPreferences = {
   language: 'fr',
   firstDayOfWeek: 'monday',
   timeFormat: '24h',
+  density: 'comfortable',
 };
 
 function toAuthErrorCode(error: unknown): AuthErrorCode {

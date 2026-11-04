@@ -56,4 +56,5 @@ export interface UserPreferences {
   language: 'fr' | 'en';
   firstDayOfWeek: 'monday' | 'sunday';
   timeFormat: '12h' | '24h';
+  density: 'compact' | 'comfortable';
 }

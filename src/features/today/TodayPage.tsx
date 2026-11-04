@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Flame, Search, SlidersHorizontal, Sparkles, Sun } from 'lucide-react';
 import { isSameDay } from 'date-fns';
-import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ProgressRing } from '@/components/ProgressRing';
@@ -73,7 +72,6 @@ export function TodayPage() {
     </div>}
     {today.errorMessage && <p className="inline-error" role="alert">{today.errorMessage}</p>}
     {actions.errorMessage && <p className="inline-error" role="alert">{actions.errorMessage}</p>}
-    <Card className="feature-note"><div className="feature-note__icon"><Flame size={22} /></div><div><h2>{fr.todayPage.hydration}</h2><p>{fr.todayPage.hydrationInfo}</p></div><Button aria-label={fr.todayPage.hydrationInfo} onClick={() => setToast({ message: fr.pagesContent.unavailable, undo: async () => undefined })}>{fr.todayPage.details}</Button></Card>
     {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} onUndo={() => { void toast.undo(); setToast(null); }} />}
   </div>;
 }
