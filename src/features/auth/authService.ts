@@ -4,6 +4,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
+  sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth';
 import { clearIndexedDbPersistence, terminate, waitForPendingWrites } from 'firebase/firestore';
@@ -33,6 +34,10 @@ export function signInWithGoogle(): Promise<void> {
   return shouldUseGoogleRedirect()
     ? signInWithRedirect(auth, provider)
     : signInWithPopup(auth, provider).then(() => undefined);
+}
+
+export function sendPasswordReset(email: string): Promise<void> {
+  return sendPasswordResetEmail(auth, email).then(() => undefined);
 }
 
 export function signOutCurrentUser(): Promise<void> {

@@ -130,6 +130,12 @@ La création d'une tâche (`Nouvelle tâche`, bouton d'ajout rapide ou route `/n
 
 Lors du premier lancement sur un appareil, une feuille de bienvenue explique les trois bénéfices principaux de DayFlow. Sa fermeture est mémorisée dans `localStorage`, avec les thèmes existants et `prefers-reduced-motion`.
 
+### Authentification
+
+L'écran et la feuille d'authentification utilisent une composition aérée, avec une largeur maximale tokenisée (`--auth-content-max`), des champs de `3.25rem` à `3.5rem` de haut et des cibles d'action d'au moins `44px`. Les surfaces restent Soft UI, mais l'ombre est volontairement discrète pour éviter l'effet de petite boîte enfermée.
+
+La connexion, l'inscription et la réinitialisation du mot de passe partagent le même composant. Le mot de passe peut être affiché ou masqué ; les erreurs sont annoncées avec une icône et un message lisible. Le formulaire d'inscription ne demande pas de nom tant qu'aucun champ de profil n'est prévu dans le modèle Firebase actuel.
+
 ## Formes, ombres et espacements
 
 - Cartes principales et modales : rayon 24 px ; certaines lignes d'historique sont plus compactes (20 px). Boutons, filtres et puces : pilule. Les contrôles secondaires utilisent ponctuellement 12 ou 16 px.

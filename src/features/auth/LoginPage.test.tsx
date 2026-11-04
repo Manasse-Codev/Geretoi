@@ -7,6 +7,7 @@ const authActions = vi.hoisted(() => ({
   signIn: vi.fn(),
   register: vi.fn(),
   signInGoogle: vi.fn(),
+  resetPassword: vi.fn(),
   clearError: vi.fn(),
 }));
 
@@ -36,6 +37,7 @@ describe('LoginPage', () => {
     authActions.signIn.mockReset().mockResolvedValue(undefined);
     authActions.register.mockReset().mockResolvedValue(undefined);
     authActions.signInGoogle.mockReset().mockResolvedValue(undefined);
+    authActions.resetPassword.mockReset().mockResolvedValue(undefined);
     authActions.clearError.mockReset();
   });
 
@@ -63,7 +65,7 @@ describe('LoginPage', () => {
   it('permet de basculer vers la création de compte', () => {
     render(<LoginPage />);
     fireEvent.click(screen.getByRole('button', { name: 'Créer un compte' }));
-    expect(screen.getByRole('heading', { name: 'Créer votre compte' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Commencez à mieux vous organiser' })).toBeTruthy();
   });
 
   it('permet de fermer la connexion différée en restant invité', () => {
@@ -77,6 +79,14 @@ describe('LoginPage', () => {
     render(<LoginPage compact />);
     fireEvent.click(screen.getByRole('button', { name: 'Continuer avec Google' }));
     await waitFor(() => expect(authActions.signInGoogle).toHaveBeenCalledOnce());
+  });
+
+  it('envoie une demande de réinitialisation', async () => {
+    render(<LoginPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mot de passe oublié ?' }));
+    fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: 'jour@example.fr' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Envoyer le lien' }));
+    await waitFor(() => expect(authActions.resetPassword).toHaveBeenCalledWith('jour@example.fr'));
   });
 
   it('ouvre le formulaire suivant après authentification', () => {

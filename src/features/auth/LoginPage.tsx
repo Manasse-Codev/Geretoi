@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { AlertCircle, Globe2 } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Globe2, LockKeyhole, Mail, Sparkles } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Logo } from '@/components/Logo';
@@ -24,13 +24,15 @@ function validateCredentials(email: string, password: string): AuthErrorCode | n
 }
 
 export function LoginPage({ compact = false, onAuthenticated, onClose }: LoginPageProps) {
-  const { user, signIn, register, signInGoogle, error, errorMessage, clearError } = useAuth();
-  const [creatingAccount, setCreatingAccount] = useState(false);
+  const { user, signIn, register, signInGoogle, resetPassword, error, errorMessage, clearError } = useAuth();
+  const [mode, setMode] = useState<'signIn' | 'register' | 'reset'>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<AuthErrorCode | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const authenticationHandled = useRef(false);
   const activeError = localError ?? error;
   const message = localError ? fr.auth.errors[localError] : errorMessage;
@@ -48,15 +50,26 @@ export function LoginPage({ compact = false, onAuthenticated, onClose }: LoginPa
     onAuthenticated?.();
   }, [onAuthenticated, user]);
 
+  useEffect(() => {
+    if (error) setResetSent(false);
+  }, [error]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     clearError();
-    const validationError = validateCredentials(email, password);
+    const validationError = mode === 'reset'
+      ? (!emailPattern.test(email.trim()) ? 'invalidEmail' : null)
+      : validateCredentials(email, password);
     setLocalError(validationError);
     if (validationError) return;
 
     setSubmitting(true);
-    await (creatingAccount ? register(email.trim(), password) : signIn(email.trim(), password));
+    if (mode === 'reset') {
+      await resetPassword(email.trim());
+      setResetSent(true);
+    } else {
+      await (mode === 'register' ? register(email.trim(), password) : signIn(email.trim(), password));
+    }
     setSubmitting(false);
   };
 
@@ -69,17 +82,25 @@ export function LoginPage({ compact = false, onAuthenticated, onClose }: LoginPa
   };
 
   const toggleMode = () => {
-    setCreatingAccount((current) => !current);
+    setMode((current) => current === 'register' ? 'signIn' : 'register');
     setLocalError(null);
+    setResetSent(false);
     clearError();
   };
 
+  const isReset = mode === 'reset';
+  const isRegister = mode === 'register';
+  const title = isReset ? fr.auth.resetTitle : isRegister ? fr.auth.createAccountTitle : fr.auth.loginTitle;
+  const subtitle = isReset ? fr.auth.resetSubtitle : isRegister ? fr.auth.createAccountSubtitle : fr.auth.loginSubtitle;
+
   return (
-    <main className={compact ? 'auth-screen auth-screen--compact' : 'auth-screen'}>
+    <main className={`${compact ? 'auth-screen auth-screen--compact' : 'auth-screen'} auth-screen--${mode}`}>
       <Card className="auth-card">
-        <Logo className="auth-logo" size="lg" />
-        <h1>{creatingAccount ? fr.auth.createAccountTitle : fr.auth.loginTitle}</h1>
-        <p className="auth-intro">{fr.auth.subtitle}</p>
+        <div className="auth-card__brand"><Logo className="auth-logo" size="md" /><span><Sparkles aria-hidden="true" size={15} />DayFlow</span></div>
+        <div className="auth-card__heading">
+          <h1>{title}</h1>
+          <p className="auth-intro">{subtitle}</p>
+        </div>
 
         <form className="auth-form" noValidate onSubmit={(event) => void handleSubmit(event)}>
           <TextField
@@ -93,35 +114,43 @@ export function LoginPage({ compact = false, onAuthenticated, onClose }: LoginPa
             type="email"
             value={email}
           />
-          <TextField
-            autoComplete={creatingAccount ? 'new-password' : 'current-password'}
-            className="auth-field__input"
-            id="auth-password"
-            label={fr.auth.passwordLabel}
-            onChange={(event) => { setPassword(event.currentTarget.value); setLocalError(null); clearError(); }}
-            placeholder={fr.auth.passwordPlaceholder}
-            error={passwordError}
-            type="password"
-            value={password}
-          />
+          {!isReset && <div className="auth-password-field">
+            <TextField
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
+              className="auth-field__input"
+              id="auth-password"
+              label={fr.auth.passwordLabel}
+              onChange={(event) => { setPassword(event.currentTarget.value); setLocalError(null); clearError(); }}
+              placeholder={fr.auth.passwordPlaceholder}
+              error={passwordError}
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+            />
+            <button
+              aria-label={showPassword ? fr.auth.hidePassword : fr.auth.showPassword}
+              className="auth-password-toggle focus-ring"
+              onClick={() => setShowPassword((value) => !value)}
+              type="button"
+            >
+              {showPassword ? <EyeOff aria-hidden="true" size={19} /> : <Eye aria-hidden="true" size={19} />}
+            </button>
+          </div>}
+          {!isReset && !isRegister && <button className="auth-forgot focus-ring" onClick={() => { setMode('reset'); setLocalError(null); setResetSent(false); clearError(); }} type="button">{fr.auth.forgotPassword}</button>}
+          {resetSent && <p className="auth-success" role="status"><Mail aria-hidden="true" size={17} />{fr.auth.resetSent}</p>}
           {activeError && message && !fieldError && (
             <p className="auth-error" role="alert"><AlertCircle aria-hidden="true" size={18} /><span>{message}</span></p>
           )}
           <Button className="auth-submit" disabled={submitting || googleSubmitting} loading={submitting} type="submit" variant="primary">
-            {creatingAccount ? fr.auth.createAccount : fr.auth.signIn}
+            {isReset ? fr.auth.sendReset : isRegister ? fr.auth.createAccountAction : fr.auth.signIn}
           </Button>
         </form>
 
-        <div aria-hidden="true" className="auth-divider"><span>{fr.auth.or}</span></div>
+        {!isReset && <><div aria-hidden="true" className="auth-divider"><span>{fr.auth.or}</span></div>
         <Button className="auth-google" disabled={submitting || googleSubmitting} loading={googleSubmitting} onClick={() => void handleGoogle()} variant="secondary">
-          <Globe2 aria-hidden="true" size={19} />
-          {fr.auth.google}
-        </Button>
+          <Globe2 aria-hidden="true" size={19} />{fr.auth.google}
+        </Button></>}
         <p className="auth-switch">
-          {creatingAccount ? fr.auth.haveAccount : fr.auth.noAccount}{' '}
-          <button className="auth-link focus-ring" onClick={toggleMode} type="button">
-            {creatingAccount ? fr.auth.signIn : fr.auth.createAccount}
-          </button>
+          {isReset ? <button className="auth-link focus-ring" onClick={() => { setMode('signIn'); setResetSent(false); clearError(); }} type="button"><LockKeyhole aria-hidden="true" size={15} />{fr.auth.backToSignIn}</button> : <>{isRegister ? fr.auth.haveAccount : fr.auth.noAccount}{' '}<button className="auth-link focus-ring" onClick={toggleMode} type="button">{isRegister ? fr.auth.signIn : fr.auth.createAccount}</button></>}
         </p>
         {compact && onClose && <Button onClick={onClose} variant="ghost">{fr.auth.continueAsGuest}</Button>}
       </Card>

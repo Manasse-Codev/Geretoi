@@ -6,7 +6,7 @@ import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { fr } from '@/i18n/fr';
 import { AuthContext } from '@/features/auth/authContext';
 import { auth } from '@/lib/firebase';
-import { createEmailAccount, PendingWritesError, signInWithEmail, signInWithGoogle, signOutCurrentUser } from '@/features/auth/authService';
+import { createEmailAccount, PendingWritesError, sendPasswordReset, signInWithEmail, signInWithGoogle, signOutCurrentUser } from '@/features/auth/authService';
 import type { AuthContextValue, AuthErrorCode } from '@/features/auth/authTypes';
 import type { UserPreferences } from '@/types/models';
 
@@ -121,6 +121,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const register = useCallback((email: string, password: string) =>
     runAuthAction(() => createEmailAccount(email, password)), [runAuthAction]);
   const signInGoogle = useCallback(() => runAuthAction(signInWithGoogle), [runAuthAction]);
+  const resetPassword = useCallback((email: string) => runAuthAction(() => sendPasswordReset(email)), [runAuthAction]);
   const signOutUser = useCallback(() => runAuthAction(signOutCurrentUser), [runAuthAction]);
   const clearError = useCallback(() => setError(null), []);
 
@@ -132,10 +133,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     signIn,
     register,
     signInGoogle,
+    resetPassword,
     signOut: signOutUser,
     clearError,
-  }), [clearError, error, loading, register, signIn, signInGoogle, signOutUser, user]);
+  }), [clearError, error, loading, register, resetPassword, signIn, signInGoogle, signOutUser, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
