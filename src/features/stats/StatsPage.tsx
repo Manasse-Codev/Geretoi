@@ -5,15 +5,18 @@ import { addDays, endOfDay, format, startOfDay, subDays } from 'date-fns';
 import { fr as frDate } from 'date-fns/locale';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
+import { GuestState } from '@/components/GuestState';
 import { RetryNotice } from '@/components/RetryNotice';
 import { TaskCard } from '@/components/TaskCard';
 import { useTaskActions } from '@/features/tasks';
 import { fr } from '@/i18n/fr';
+import { useAuth } from '@/features/auth/useAuth';
 import { StatsMetricCard } from './StatsMetricCard';
 import { useStatsTasks } from './useStatsTasks';
 import { formatDuration } from '@/lib/duration';
 
 export function StatsPage() {
+  const { user } = useAuth();
   const actions = useTaskActions();
   const [range, setRange] = useState<7 | 30>(7);
   const start = useMemo(() => startOfDay(subDays(new Date(), range - 1)), [range]);
@@ -25,6 +28,8 @@ export function StatsPage() {
     const date = addDays(start, index);
     return { day: format(date, range === 7 ? 'EEE' : 'd MMM', { locale: frDate }), tasks: stats.dailyCounts[index] ?? 0 };
   }), [range, start, stats.dailyCounts]);
+
+  if (!user) return <div className="screen screen--stats"><header className="screen-heading screen-heading--row"><div><p className="eyebrow"><Activity size={18} />{fr.statsPage.title}</p><h1>{fr.statsPage.summary}</h1><p className="muted">{fr.statsPage.scope}</p></div></header><GuestState /></div>;
 
   return <div className="screen screen--stats">
     <header className="screen-heading screen-heading--row"><div><p className="eyebrow"><Activity size={18} />{fr.statsPage.title}</p><h1>{fr.statsPage.summary}</h1><p className="muted">{fr.statsPage.scope}</p></div><select aria-label={fr.statsPage.periodLabel} className="text-control stats-range" onChange={(event) => setRange(Number(event.currentTarget.value) as 7 | 30)} value={range}><option value={7}>{fr.statsPage.week}</option><option value={30}>{fr.statsPage.days30}</option></select></header>

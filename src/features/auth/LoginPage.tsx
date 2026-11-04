@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AlertCircle, Globe2 } from 'lucide-react';
 import { Button } from '@/components/Button';
@@ -9,6 +9,12 @@ import { useAuth } from '@/features/auth/useAuth';
 import type { AuthErrorCode } from '@/features/auth/authTypes';
 import { fr } from '@/i18n/fr';
 
+export interface LoginPageProps {
+  compact?: boolean;
+  onAuthenticated?: () => void;
+  onClose?: () => void;
+}
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateCredentials(email: string, password: string): AuthErrorCode | null {
@@ -17,19 +23,30 @@ function validateCredentials(email: string, password: string): AuthErrorCode | n
   return null;
 }
 
-export function LoginPage() {
-  const { signIn, register, signInGoogle, error, errorMessage, clearError } = useAuth();
+export function LoginPage({ compact = false, onAuthenticated, onClose }: LoginPageProps) {
+  const { user, signIn, register, signInGoogle, error, errorMessage, clearError } = useAuth();
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<AuthErrorCode | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const authenticationHandled = useRef(false);
   const activeError = localError ?? error;
   const message = localError ? fr.auth.errors[localError] : errorMessage;
   const emailError = activeError === 'invalidEmail' ? message ?? undefined : undefined;
   const passwordError = activeError === 'weakPassword' ? message ?? undefined : undefined;
   const fieldError = emailError !== undefined || passwordError !== undefined;
+
+  useEffect(() => {
+    if (!user) {
+      authenticationHandled.current = false;
+      return;
+    }
+    if (authenticationHandled.current) return;
+    authenticationHandled.current = true;
+    onAuthenticated?.();
+  }, [onAuthenticated, user]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,7 +75,7 @@ export function LoginPage() {
   };
 
   return (
-    <main className="auth-screen">
+    <main className={compact ? 'auth-screen auth-screen--compact' : 'auth-screen'}>
       <Card className="auth-card">
         <Logo className="auth-logo" size="lg" />
         <h1>{creatingAccount ? fr.auth.createAccountTitle : fr.auth.loginTitle}</h1>
@@ -106,6 +123,7 @@ export function LoginPage() {
             {creatingAccount ? fr.auth.signIn : fr.auth.createAccount}
           </button>
         </p>
+        {compact && onClose && <Button onClick={onClose} variant="ghost">{fr.auth.continueAsGuest}</Button>}
       </Card>
     </main>
   );

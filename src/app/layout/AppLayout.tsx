@@ -17,6 +17,8 @@ import { useAuth } from '@/features/auth/useAuth';
 import { preloadPrimaryRoutes } from '@/app/router';
 import { fr } from '@/i18n/fr';
 import { hasPendingUnsavedChanges } from '@/lib/unsavedChanges';
+import { AuthDialog } from '@/features/auth/AuthDialog';
+import { WelcomeDialog } from '@/components/WelcomeDialog';
 
 export function AppLayout() {
   return <InstallPromptProvider><AppLayoutContent /></InstallPromptProvider>;
@@ -31,12 +33,19 @@ function AppLayoutContent() {
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const previousPath = useRef(location.pathname);
   const [pulseKey, setPulseKey] = useState(0);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(() => {
+    try { return localStorage.getItem('dayflow-welcome-seen') !== 'true'; } catch { return true; }
+  });
   const [isEditingText, setIsEditingText] = useState(false);
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme;
     document.documentElement.dataset.timeFormat = preferences.timeFormat;
     document.documentElement.dataset.density = preferences.density;
   }, [preferences.density, preferences.theme, preferences.timeFormat]);
+  useEffect(() => {
+    if (user) setWelcomeOpen(false);
+  }, [user]);
   useEffect(() => {
     const onTaskCreated = () => setPulseKey((value) => value + 1);
     window.addEventListener('dayflow:task-created', onTaskCreated);
@@ -92,6 +101,16 @@ function AppLayoutContent() {
   const active: BottomNavTab = location.pathname.startsWith('/planner') ? 'planner' : location.pathname.startsWith('/lists') ? 'lists' : location.pathname.startsWith('/stats') || location.pathname.startsWith('/history') || location.pathname.startsWith('/trash') ? 'stats' : 'today';
   const toggleTheme = () => void update({ theme: preferences.theme === 'dark' ? 'light' : 'dark' }).catch(() => undefined);
 
+  function requestCreateTask() {
+    if (user) navigate('/new');
+    else setAuthOpen(true);
+  }
+
+  function completeAuthentication() {
+    setAuthOpen(false);
+    navigate('/new');
+  }
+
   return <div className="app-shell">
     {!isTaskForm && <header className="app-topbar">
       <Link aria-label="DayFlow, accueil" className="app-brand" to="/"><Logo size="sm" /></Link>
@@ -114,9 +133,11 @@ function AppLayoutContent() {
         transition={prefersReducedMotion ? { duration: 0.12 } : { duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       ><Outlet /></motion.main>
     </AnimatePresence>
-    {!isTaskForm && <BottomNav active={active} addButtonRef={addButtonRef} onAdd={() => navigate('/new')} onNavigate={(tab) => navigate(tab === 'today' ? '/' : `/${tab}`)} pulseKey={pulseKey} />}
+    {!isTaskForm && <BottomNav active={active} addButtonRef={addButtonRef} onAdd={requestCreateTask} onNavigate={(tab) => navigate(tab === 'today' ? '/' : `/${tab}`)} pulseKey={pulseKey} />}
     {!isTaskForm && !isSettingsPage && install.showCard && !isEditingText && !hasPendingUnsavedChanges() && <InstallCard isIOS={install.isIOS} onInstall={install.requestInstall} onLater={install.dismissCard} visible />}
     <InstallGuideSheet isIOS={install.isIOS} isSafari={install.isSafari} onClose={install.closeGuide} open={install.guideOpen} />
     {install.successToast && <InstallToast onDismiss={install.dismissToast} />}
+    {!isTaskForm && <WelcomeDialog onClose={() => setWelcomeOpen(false)} open={welcomeOpen} />}
+    {!isTaskForm && <AuthDialog onAuthenticated={completeAuthentication} onClose={() => setAuthOpen(false)} open={authOpen} />}
   </div>;
 }

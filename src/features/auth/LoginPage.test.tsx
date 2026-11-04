@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LoginPage } from '@/features/auth/LoginPage';
 
+const authState = vi.hoisted(() => ({ user: null as { uid: string } | null }));
 const authActions = vi.hoisted(() => ({
   signIn: vi.fn(),
   register: vi.fn(),
@@ -12,7 +13,7 @@ const authActions = vi.hoisted(() => ({
 vi.mock('@/features/auth/useAuth', () => ({
   useAuth: () => ({
     ...authActions,
-    user: null,
+    user: authState.user,
     loading: false,
     error: null,
     errorMessage: null,
@@ -31,6 +32,7 @@ describe('LoginPage', () => {
   afterEach(() => cleanup());
 
   beforeEach(() => {
+    authState.user = null;
     authActions.signIn.mockReset().mockResolvedValue(undefined);
     authActions.register.mockReset().mockResolvedValue(undefined);
     authActions.signInGoogle.mockReset().mockResolvedValue(undefined);
@@ -62,5 +64,26 @@ describe('LoginPage', () => {
     render(<LoginPage />);
     fireEvent.click(screen.getByRole('button', { name: 'Créer un compte' }));
     expect(screen.getByRole('heading', { name: 'Créer votre compte' })).toBeTruthy();
+  });
+
+  it('permet de fermer la connexion différée en restant invité', () => {
+    const onClose = vi.fn();
+    render(<LoginPage compact onClose={onClose} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Continuer sans compte' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('signale la connexion Google depuis la feuille différée', async () => {
+    render(<LoginPage compact />);
+    fireEvent.click(screen.getByRole('button', { name: 'Continuer avec Google' }));
+    await waitFor(() => expect(authActions.signInGoogle).toHaveBeenCalledOnce());
+  });
+
+  it('ouvre le formulaire suivant après authentification', () => {
+    const onAuthenticated = vi.fn();
+    const { rerender } = render(<LoginPage compact onAuthenticated={onAuthenticated} />);
+    authState.user = { uid: 'user-1' };
+    rerender(<LoginPage compact onAuthenticated={onAuthenticated} />);
+    expect(onAuthenticated).toHaveBeenCalledOnce();
   });
 });

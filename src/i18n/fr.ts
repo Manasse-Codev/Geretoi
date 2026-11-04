@@ -84,6 +84,9 @@ export const fr = {
     haveAccount: 'Vous avez déjà un compte ?',
     signOut: 'Se déconnecter',
     loading: 'Vérification de votre session…',
+    dialogLabel: 'Connexion à DayFlow',
+    continueAsGuest: 'Continuer sans compte',
+    guest: 'Invité',
     errors: {
       invalidEmail: 'Saisissez une adresse e-mail valide.',
       weakPassword: 'Le mot de passe doit contenir au moins 6 caractères.',
@@ -94,6 +97,21 @@ export const fr = {
       pendingWrites: 'La synchronisation est en attente. Reconnectez-vous et réessayez avant de vous déconnecter.',
       unknown: 'La connexion a échoué. Réessayez dans un instant.',
     },
+  },
+  welcome: {
+    title: 'Bienvenue sur DayFlow !',
+    description: 'Votre journée mérite une meilleure organisation. DayFlow vous aide à planifier vos activités, organiser vos tâches, définir vos priorités et suivre votre progression, le tout dans un espace simple et intuitif.',
+    organizeTitle: 'Organisez',
+    organizeDescription: 'Rassemblez vos tâches et activités au même endroit.',
+    planTitle: 'Planifiez',
+    planDescription: 'Structurez votre journée et définissez vos priorités.',
+    progressTitle: 'Progressez',
+    progressDescription: 'Suivez vos réalisations et améliorez votre organisation.',
+    discover: 'Découvrir DayFlow',
+    skip: 'Ignorer',
+    guestTitle: 'Votre espace est prêt à être organisé',
+    guestDescription: 'Explorez DayFlow librement. Connectez-vous uniquement lorsque vous souhaitez créer et synchroniser vos tâches.',
+    startTask: 'Créer une tâche',
   },
   data: {
     sync: {

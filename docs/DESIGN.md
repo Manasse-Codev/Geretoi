@@ -122,6 +122,14 @@ contenu dépasse la largeur disponible, ils passent en défilement horizontal co
 que de couper le texte. Les lignes de réglages deviennent verticales sous `600px` afin que le
 contrôle occupe toute la largeur ; les interrupteurs et valeurs longues suivent la même règle.
 
+### Parcours invité et authentification différée
+
+DayFlow s'ouvre directement sur l'interface principale, même lorsqu'aucun compte n'est connecté. Les écrans de découverte affichent un état vide neutre et ne présentent jamais de tâches personnelles fictives ; les lectures et écritures Firestore restent désactivées sans UID authentifié.
+
+La création d'une tâche (`Nouvelle tâche`, bouton d'ajout rapide ou route `/new`) ouvre la feuille d'authentification existante. Elle permet la connexion, la création de compte et Google lorsque ce fournisseur est configuré. La fermeture laisse l'utilisateur en mode invité ; après réussite, la feuille se ferme et le formulaire demandé s'ouvre directement.
+
+Lors du premier lancement sur un appareil, une feuille de bienvenue explique les trois bénéfices principaux de DayFlow. Sa fermeture est mémorisée dans `localStorage`, avec les thèmes existants et `prefers-reduced-motion`.
+
 ## Formes, ombres et espacements
 
 - Cartes principales et modales : rayon 24 px ; certaines lignes d'historique sont plus compactes (20 px). Boutons, filtres et puces : pilule. Les contrôles secondaires utilisent ponctuellement 12 ou 16 px.

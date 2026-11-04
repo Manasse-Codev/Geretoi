@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Activity, Search, SlidersHorizontal } from 'lucide-react';
 import { differenceInCalendarDays, format } from 'date-fns';
 import { EmptyState } from '@/components/EmptyState';
+import { GuestState } from '@/components/GuestState';
 import { TaskCard } from '@/components/TaskCard';
 import { Button } from '@/components/Button';
 import { RetryNotice } from '@/components/RetryNotice';
@@ -9,11 +10,13 @@ import { useLists } from '@/features/lists/useLists';
 import { useTags } from '@/features/tags/useTags';
 import { useHistory, useTaskActions, useTrash } from '@/features/tasks';
 import { fr } from '@/i18n/fr';
+import { useAuth } from '@/features/auth/useAuth';
 import { groupTasksByCompletionDay } from '@/lib/dates';
 
 type HistoryTab = 'done' | 'trash' | 'all';
 
 export function HistoryPage({ trashOnly = false }: { trashOnly?: boolean }) {
+  const { user } = useAuth();
   const history = useHistory(); const trash = useTrash(); const listsState = useLists(); const lists = listsState.lists; const tagsState = useTags(); const tags = tagsState.tags; const actions = useTaskActions();
   const [tab, setTab] = useState<HistoryTab>(trashOnly ? 'trash' : 'done');
   const [search, setSearch] = useState(''); const [listFilter, setListFilter] = useState(''); const [tagFilter, setTagFilter] = useState('');
@@ -23,6 +26,8 @@ export function HistoryPage({ trashOnly = false }: { trashOnly?: boolean }) {
   const filtered = base.filter((task) => task.title.toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr')) && (!listFilter || task.listId === listFilter) && (!tagFilter || task.tags.includes(tagFilter)));
   const historyFiltered = selectedTab === 'all' ? filtered.filter((task) => task.deletedAt === null) : filtered;
   const grouped = useMemo(() => selectedTab === 'trash' ? [] : groupTasksByCompletionDay(historyFiltered.filter((task) => task.status === 'done')), [historyFiltered, selectedTab]);
+
+  if (!user) return <div className="screen screen--history"><header className="screen-heading screen-heading--row"><div><p className="eyebrow"><Activity size={17} />{trashOnly ? fr.pages.trash : fr.pages.history}</p><h1>{trashOnly ? fr.pages.trash : fr.pages.history}</h1></div></header><GuestState /></div>;
 
   return <div className="screen screen--history">
     <header className="screen-heading screen-heading--row"><div><p className="eyebrow"><Activity size={17} />{trashOnly ? fr.pages.trash : fr.pages.history}</p><h1>{trashOnly ? fr.pages.trash : fr.pages.history}</h1></div></header>

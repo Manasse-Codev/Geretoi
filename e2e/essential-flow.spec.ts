@@ -63,8 +63,8 @@ test('attend les écritures puis efface le cache Firestore avant la déconnexion
   await createAccount(page);
   await page.getByRole('button', { name: 'Réglages', exact: true }).click();
   await page.getByRole('button', { name: fr.settingsPage.signOut, exact: true }).click();
-  await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole('heading', { name: 'Connectez-vous à votre espace' })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: "Aujourd'hui" })).toBeVisible();
   await expect.poll(() => page.evaluate(async () => {
     const databases = await indexedDB.databases();
     return databases.some((database) => database.name?.includes('firestore'));

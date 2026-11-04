@@ -63,7 +63,7 @@ export function SettingsPage() {
   ];
   return <div className="screen screen--settings">
     <header className="screen-heading"><p className="eyebrow">DayFlow</p><h1>{fr.pages.settings}</h1><p className="muted">{fr.settingsPage.description}</p></header>
-    <Card className="profile-card"><span className="profile-avatar"><UserRound size={23} /></span><div className="profile-card__identity"><strong>{user?.displayName || fr.settingsPage.account}</strong><span>{user?.email}</span></div></Card>
+    <Card className="profile-card"><span className="profile-avatar"><UserRound size={23} /></span><div className="profile-card__identity"><strong>{user?.displayName || (user ? fr.settingsPage.account : fr.auth.guest)}</strong>{user?.email && <span>{user.email}</span>}</div></Card>
     <SettingsSection icon={<Palette size={17} />} title={fr.settingsPage.appearance}>
       <div className="settings-row settings-row--stack"><span>{fr.settingsPage.theme}</span><SegmentedControl label={fr.settingsPage.theme} onValueChange={(value) => void save('theme', value as 'light' | 'dark' | 'auto')} options={themeOptions} value={preferences.theme} /></div>
       <div className="settings-row"><span>{fr.settingsPage.density}</span><SegmentedControl label={fr.settingsPage.density} onValueChange={(value) => void save('density', value as 'compact' | 'comfortable')} options={[{ value: 'compact', label: fr.settingsPage.compact }, { value: 'comfortable', label: fr.settingsPage.comfortable }]} value={preferences.density} /></div>
@@ -72,10 +72,10 @@ export function SettingsPage() {
       <div className="settings-row"><span>{fr.settingsPage.weekStart}</span><SegmentedControl label={fr.settingsPage.weekStart} onValueChange={(value) => void save('firstDayOfWeek', value as 'monday' | 'sunday')} options={[{ value: 'monday', label: fr.settingsPage.monday }, { value: 'sunday', label: fr.settingsPage.sunday }]} value={preferences.firstDayOfWeek} /></div>
       <div className="settings-row"><span>{fr.settingsPage.timeFormat}</span><SegmentedControl label={fr.settingsPage.timeFormat} onValueChange={(value) => void save('timeFormat', value as '12h' | '24h')} options={[{ value: '24h', label: '24 h' }, { value: '12h', label: '12 h' }]} value={preferences.timeFormat} /></div>
     </SettingsSection>
-    <SettingsSection icon={<Cloud size={17} />} title={fr.settingsPage.accountSync}>
+    {user && <SettingsSection icon={<Cloud size={17} />} title={fr.settingsPage.accountSync}>
       <div className="settings-row"><span className="settings-row__icon">{provider === 'Google' ? 'G' : <UserRound size={17} />}</span><span className="settings-row__label">{fr.settingsPage.account} {provider}<small>{user?.email}</small></span><strong className="connected-state"><Check size={14} />{fr.settingsPage.connected}</strong></div>
-    </SettingsSection>
-    <SettingsSection icon={<Download size={17} />} title={fr.settingsPage.data}>
+    </SettingsSection>}
+    {user && <SettingsSection icon={<Download size={17} />} title={fr.settingsPage.data}>
       {install.isInstallAvailable && <button className="settings-row settings-row--button" onClick={install.requestInstall} type="button"><span><Download size={17} />{fr.install.settings}</span><ArrowRight size={16} /></button>}
       <div className="settings-export-options">
         <label><input checked={exportOptions.includeHistory} disabled={busy} onChange={(event) => setExportOptions((current) => ({ ...current, includeHistory: event.target.checked }))} type="checkbox" />{fr.settingsPage.includeHistory}</label>
@@ -86,8 +86,8 @@ export function SettingsPage() {
       <button className="settings-row settings-row--button" disabled={busy} onClick={() => void exportIcs()} type="button"><span><CalendarDays size={17} />{fr.settingsPage.exportCalendar}</span><ArrowRight size={16} /></button>
       {busy && progress && <div className="settings-export-progress" role="status"><span>{fr.settingsPage.exportProgress}</span><span>{progress.current}{progress.total > 1 ? ` / ${progress.total}` : ''}</span><button className="link-button" onClick={cancelExport} type="button">{fr.settingsPage.cancelExport}</button></div>}
       <button className="settings-row settings-row--button" onClick={() => navigate('/trash')} type="button"><span><Trash2 size={17} />{fr.settingsPage.trash}</span><span>{fr.settingsPage.retention30}<ArrowRight size={16} /></span></button>
-    </SettingsSection>
-    <div className="sensitive-actions"><Button onClick={() => void signOut()} variant="secondary"><LogOut size={17} />{fr.settingsPage.signOut}</Button></div>
+    </SettingsSection>}
+    {user && <div className="sensitive-actions"><Button onClick={() => void signOut()} variant="secondary"><LogOut size={17} />{fr.settingsPage.signOut}</Button></div>}
     {(error || authErrorMessage) && <p className="inline-error" role="alert">{error || authErrorMessage}</p>}
     {toast && <Toast message={toast} onDismiss={() => setToast('')} onUndo={() => setToast('')} />}
   </div>;

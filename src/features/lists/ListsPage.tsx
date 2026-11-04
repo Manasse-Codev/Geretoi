@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, FolderOpen, ListChecks, Plus, Tag, Trash2 } from 'l
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
+import { GuestState } from '@/components/GuestState';
 import { TextField } from '@/components/TextField';
 import { RetryNotice } from '@/components/RetryNotice';
 import { useAuth } from '@/features/auth/useAuth';
@@ -43,6 +44,8 @@ export function ListsPage() {
   }
 
   const entries = tab === 'lists' ? listsState.lists : tagsState.tags; const loading = tab === 'lists' ? listsState.loading : tagsState.loading; const stateError = tab === 'lists' ? listsState.errorMessage : tagsState.errorMessage;
+  if (!user) return <div className="screen screen--lists"><header className="screen-heading"><p className="eyebrow"><ListChecks size={18} />{fr.listsPage.title}</p><h1>{fr.pages.lists}</h1><p className="muted">{fr.listsPage.description}</p></header><GuestState /></div>;
+
   return <div className="screen screen--lists">
     <header className="screen-heading"><p className="eyebrow"><ListChecks size={18} />{fr.listsPage.title}</p><h1>{fr.pages.lists}</h1><p className="muted">{fr.listsPage.description}</p></header>
     <div className="segmented collection-tabs" role="group" aria-label={fr.listsPage.type}><button aria-pressed={tab === 'lists'} className="filter-chip surface-raised" onClick={() => setTab('lists')} type="button"><FolderOpen size={16} />{fr.listsPage.lists}</button><button aria-pressed={tab === 'tags'} className="filter-chip surface-raised" onClick={() => setTab('tags')} type="button"><Tag size={16} />{fr.listsPage.tags}</button></div>

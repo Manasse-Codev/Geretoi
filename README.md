@@ -389,7 +389,7 @@ MIT — libre d'utilisation et de modification.
 
 - Utiliser Google et l'email/mot de passe via Firebase Auth.
 - Utiliser `signInWithPopup` sur ordinateur et `signInWithRedirect` sur mobile ou dans la PWA installée.
-- Attendre `onAuthStateChanged` avant d'afficher l'application et présenter un écran de chargement pendant cette attente.
+- Écouter `onAuthStateChanged` sans bloquer l'interface : l'application s'ouvre en mode invité et demande l'authentification uniquement avant la création d'une tâche.
 - Ajouter le domaine de production (`*.pages.dev` ou le domaine personnalisé) à la liste des domaines autorisés.
 - **Attention à Google sur Cloudflare Pages :** `signInWithRedirect` peut échouer sur les navigateurs qui bloquent le stockage tiers lorsque l'application n'est pas hébergée sur Firebase Hosting. Tester ce parcours au premier déploiement Cloudflare Pages. Solutions possibles : utiliser la popup, configurer un proxy `/__/auth`, ou proposer la connexion par e-mail comme solution de secours.
 

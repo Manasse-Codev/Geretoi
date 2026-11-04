@@ -117,6 +117,8 @@ button, a { font: inherit; }
 .empty-state { display: grid; justify-items: center; gap: 12px; padding: 32px 16px; text-align: center; }
 .app-header { display: flex; max-width: 720px; justify-content: flex-end; margin: 0 auto 16px; }
 .auth-screen { display: grid; min-height: 100vh; place-items: center; padding: 24px 16px; }
+.auth-screen--compact { min-height: auto; padding: 8px 0 0; }
+.auth-screen--compact .auth-card { width: 100%; padding: 8px 0 0; box-shadow: none; }
 .auth-card { display: grid; width: min(100%, 440px); justify-items: center; gap: 10px; padding: clamp(24px, 6vw, 40px); }
 .logo { display: inline-flex; align-items: center; gap: .34em; color: var(--color-text); font-family: Inter, ui-sans-serif, sans-serif; font-weight: 600; letter-spacing: -.035em; line-height: 1; white-space: nowrap; }
 .logo--sm { font-size: 1rem; }
@@ -147,6 +149,17 @@ button, a { font: inherit; }
 .auth-link { min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--color-violet); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .auth-loading { display: flex; min-height: 100vh; align-items: center; justify-content: center; gap: 12px; color: var(--color-text); }
 .auth-loading__mark { width: 12px; height: 12px; border: 2px solid var(--color-violet); border-radius: 50%; }
+.welcome-dialog { display: grid; gap: 14px; padding: 8px 0 0; }
+.welcome-dialog h1, .welcome-dialog p { margin: 0; }
+.welcome-dialog h1 { color: var(--color-violet); font-size: clamp(1.5rem, 5vw, 2rem); }
+.welcome-dialog > p { color: var(--color-text-secondary); line-height: 1.5; }
+.welcome-dialog__icon { color: var(--color-orange-text); }
+.welcome-dialog__benefits { display: grid; gap: 10px; }
+.welcome-dialog__benefits .card { display: flex; align-items: flex-start; gap: 12px; padding: 12px; }
+.welcome-dialog__benefits svg { flex: 0 0 auto; color: var(--color-violet); }
+.welcome-dialog__benefits div { display: grid; gap: 3px; }
+.welcome-dialog__benefits span { color: var(--color-text-secondary); font-size: .9rem; line-height: 1.35; }
+.welcome-dialog__skip { min-height: 44px; border: 0; background: transparent; color: var(--color-text-secondary); cursor: pointer; font: inherit; }
 .form-error { margin: 6px 0 0; color: var(--color-danger); font-size: .875rem; }
 .form-error { display: flex; align-items: flex-start; gap: 6px; }
 .design-gallery { max-width: 1100px; margin: 0 auto; padding: 24px 20px 120px; }

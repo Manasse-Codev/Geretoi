@@ -8,6 +8,8 @@ import { ProgressRing } from '@/components/ProgressRing';
 import { TaskCard } from '@/components/TaskCard';
 import { Toast } from '@/components/Toast';
 import { RetryNotice } from '@/components/RetryNotice';
+import { GuestState } from '@/components/GuestState';
+import { useAuth } from '@/features/auth/useAuth';
 import { useLists } from '@/features/lists/useLists';
 import { useTags } from '@/features/tags/useTags';
 import { useHistory, useOverdueTasks, useTaskActions, useTodayTasks } from '@/features/tasks';
@@ -20,6 +22,7 @@ interface UndoToast { message: string; undo: () => Promise<void> }
 
 export function TodayPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const today = useTodayTasks();
   const overdue = useOverdueTasks();
   const history = useHistory();
@@ -52,6 +55,14 @@ export function TodayPage() {
       setToast({ message: label, undo });
     } catch { /* errors are exposed by the mutation hook below */ }
   }
+
+  if (!user) return <div className="screen screen--today">
+    <header className="screen-heading screen-heading--today">
+      <div className="today-heading"><Sun aria-hidden="true" size={18} /><span>{formatFrenchDate(new Date(), 'EEEE d MMMM yyyy')}</span></div>
+      <h1>{fr.pages.today}</h1>
+    </header>
+    <GuestState />
+  </div>;
 
   return <div className="screen screen--today">
     <header className="screen-heading screen-heading--today">

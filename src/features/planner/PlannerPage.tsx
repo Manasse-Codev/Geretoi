@@ -7,10 +7,12 @@ import { CalendarDays, ChevronLeft, ChevronRight, Clock3, GripVertical, Plus } f
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
+import { GuestState } from '@/components/GuestState';
 import { RetryNotice } from '@/components/RetryNotice';
 import { useTaskActions, useTasksInRange, useUnscheduledTasks } from '@/features/tasks';
 import { usePreferences } from '@/features/settings/usePreferences';
 import { fr } from '@/i18n/fr';
+import { useAuth } from '@/features/auth/useAuth';
 import type { Task } from '@/types/models';
 import { formatDuration } from '@/lib/duration';
 
@@ -32,6 +34,7 @@ function CalendarDropZone({ date, children }: { date: Date; children: ReactNode 
 }
 
 export function PlannerPage() {
+  const { user } = useAuth();
   const { preferences } = usePreferences();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showInfo, setShowInfo] = useState(false);
@@ -54,6 +57,8 @@ export function PlannerPage() {
     const [year, month, day] = dateValue.split('-').map(Number);
     if (year && month && day) void schedule(event.active.id, new Date(year, month - 1, day));
   }
+
+  if (!user) return <div className="screen screen--planner"><header className="screen-heading screen-heading--row"><div><p className="eyebrow"><CalendarDays size={17} />{fr.plannerPage.title}</p><h1>{format(selectedDate, 'MMMM yyyy', { locale: frDate })}</h1></div></header><GuestState /></div>;
 
   return <div className="screen screen--planner">
     <header className="screen-heading screen-heading--row"><div><p className="eyebrow"><CalendarDays size={17} />{fr.plannerPage.title}</p><h1>{format(selectedDate, 'MMMM yyyy', { locale: frDate })}</h1></div><div className="week-controls"><Button aria-label={fr.plannerPage.previous} onClick={() => setSelectedDate((date) => subWeeks(date, 1))}><ChevronLeft /></Button><Button aria-label={fr.plannerPage.next} onClick={() => setSelectedDate((date) => addWeeks(date, 1))}><ChevronRight /></Button></div></header>

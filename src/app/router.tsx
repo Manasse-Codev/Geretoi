@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { ReactNode } from 'react';
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { AuthGate } from '@/app/AuthGate';
+import { TaskCreationGate } from '@/app/TaskCreationGate';
 import { RouteLoading } from '@/app/RouteLoading';
 import { RouteErrorBoundary, RouteNotFound } from '@/app/RouteErrorBoundary';
 import { lazyWithRetry, preloadRouteModules } from '@/lib/lazyWithRetry';
@@ -37,7 +38,7 @@ function suspended(element: ReactNode) {
 const routes: RouteObject[] = [
   { path: '/login', element: <AuthGate mode="guest">{suspended(<LoginPage />)}</AuthGate>, errorElement: <RouteErrorBoundary /> },
   {
-    element: <AuthGate>{suspended(<AppLayout />)}</AuthGate>,
+    element: suspended(<AppLayout />),
     errorElement: <RouteErrorBoundary />,
     children: [
       { path: '/', element: suspended(<TodayPage />), errorElement: <RouteErrorBoundary /> },
@@ -48,7 +49,7 @@ const routes: RouteObject[] = [
       { path: '/trash', element: suspended(<HistoryPage trashOnly />), errorElement: <RouteErrorBoundary /> },
       { path: '/settings', element: suspended(<SettingsPage />), errorElement: <RouteErrorBoundary /> },
       { path: '/settings/delete-account', element: suspended(<AccountDeletionPage />), errorElement: <RouteErrorBoundary /> },
-      { path: '/new', element: suspended(<TaskFormPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '/new', element: suspended(<TaskCreationGate />), errorElement: <RouteErrorBoundary /> },
       { path: '/edit/:taskId', element: suspended(<TaskFormPage />), errorElement: <RouteErrorBoundary /> },
       { path: '*', element: <RouteNotFound />, errorElement: <RouteErrorBoundary /> },
     ],

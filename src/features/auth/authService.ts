@@ -71,5 +71,5 @@ async function signOutSafely(): Promise<void> {
   }
 
   await signOut(auth);
-  window.location.replace('/login');
+  window.location.replace('/');
 }
