@@ -2,6 +2,7 @@ node_modules/
 dist/
 dev-dist/
 test-results/
+artifacts/mobile-scale/
 coverage/
 .env
 .env.*

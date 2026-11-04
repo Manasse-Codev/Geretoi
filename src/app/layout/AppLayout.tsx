@@ -7,29 +7,73 @@ import { Button } from '@/components/Button';
 import { Logo } from '@/components/Logo';
 import { RetryNotice } from '@/components/RetryNotice';
 import { SyncIndicator } from '@/components/SyncIndicator';
+import { InstallCard } from '@/features/install/InstallCard';
+import { InstallGuideSheet } from '@/features/install/InstallGuideSheet';
+import { InstallPromptProvider } from '@/features/install/InstallPromptProvider';
+import { useInstallPrompt } from '@/features/install/useInstallPrompt';
+import { InstallToast } from '@/features/install/InstallToast';
 import { usePreferences } from '@/features/settings/usePreferences';
 import { useAuth } from '@/features/auth/useAuth';
 import { preloadPrimaryRoutes } from '@/app/router';
 import { fr } from '@/i18n/fr';
+import { hasPendingUnsavedChanges } from '@/lib/unsavedChanges';
 
 export function AppLayout() {
+  return <InstallPromptProvider><AppLayoutContent /></InstallPromptProvider>;
+}
+
+function AppLayoutContent() {
   const location = useLocation(); const navigate = useNavigate(); const { user } = useAuth(); const { preferences, update, error: preferencesError, retry: retryPreferences, loading: preferencesLoading } = usePreferences();
-  const isTaskForm = location.pathname === '/new';
+  const install = useInstallPrompt();
+  const isTaskForm = location.pathname === '/new' || location.pathname.startsWith('/edit/');
+  const isSettingsPage = location.pathname === '/settings';
   const prefersReducedMotion = useReducedMotion() ?? false;
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const previousPath = useRef(location.pathname);
   const [pulseKey, setPulseKey] = useState(0);
+  const [isEditingText, setIsEditingText] = useState(false);
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme;
     document.documentElement.dataset.timeFormat = preferences.timeFormat;
-  }, [preferences.theme, preferences.timeFormat]);
+    document.documentElement.dataset.density = preferences.density;
+  }, [preferences.density, preferences.theme, preferences.timeFormat]);
   useEffect(() => {
     const onTaskCreated = () => setPulseKey((value) => value + 1);
     window.addEventListener('dayflow:task-created', onTaskCreated);
     return () => window.removeEventListener('dayflow:task-created', onTaskCreated);
   }, []);
   useEffect(() => {
-    if (previousPath.current === '/new' && location.pathname !== '/new') addButtonRef.current?.focus();
+    const isEditingElement = (element: Element | null) => element instanceof HTMLElement &&
+      element.matches('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]), textarea, select, [contenteditable="true"]');
+    const hasTextDraft = () => [...document.querySelectorAll<HTMLInputElement>('input[type="text"], input[type="search"], input[type="email"], textarea')]
+      .some((input) => input.value.trim().length > 0);
+    const updateEditingState = (event: Event) => {
+      if (event.type === 'focusin') setIsEditingText(event.target instanceof Element && isEditingElement(event.target));
+      else if (event.type === 'input') setIsEditingText(true);
+      else if (event.type === 'focusout') window.setTimeout(() => {
+        const active = document.activeElement;
+        setIsEditingText(isEditingElement(active) || hasTextDraft());
+      }, 0);
+    };
+    document.addEventListener('focusin', updateEditingState);
+    document.addEventListener('focusout', updateEditingState);
+    document.addEventListener('input', updateEditingState);
+    return () => {
+      document.removeEventListener('focusin', updateEditingState);
+      document.removeEventListener('focusout', updateEditingState);
+      document.removeEventListener('input', updateEditingState);
+    };
+  }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const hasDraft = [...document.querySelectorAll<HTMLInputElement>('input[type="text"], input[type="search"], input[type="email"], textarea')]
+        .some((input) => input.value.trim().length > 0);
+      setIsEditingText(hasDraft);
+    }, 360);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname]);
+  useEffect(() => {
+    if ((previousPath.current === '/new' || previousPath.current.startsWith('/edit/')) && location.pathname !== '/new' && !location.pathname.startsWith('/edit/')) addButtonRef.current?.focus();
     previousPath.current = location.pathname;
   }, [location.pathname]);
   useEffect(() => {
@@ -71,5 +115,8 @@ export function AppLayout() {
       ><Outlet /></motion.main>
     </AnimatePresence>
     {!isTaskForm && <BottomNav active={active} addButtonRef={addButtonRef} onAdd={() => navigate('/new')} onNavigate={(tab) => navigate(tab === 'today' ? '/' : `/${tab}`)} pulseKey={pulseKey} />}
+    {!isTaskForm && !isSettingsPage && install.showCard && !isEditingText && !hasPendingUnsavedChanges() && <InstallCard isIOS={install.isIOS} onInstall={install.requestInstall} onLater={install.dismissCard} visible />}
+    <InstallGuideSheet isIOS={install.isIOS} isSafari={install.isSafari} onClose={install.closeGuide} open={install.guideOpen} />
+    {install.successToast && <InstallToast onDismiss={install.dismissToast} />}
   </div>;
 }

@@ -19,6 +19,7 @@ import { TextArea } from '@/components/TextArea';
 import { TextField } from '@/components/TextField';
 import { Toast } from '@/components/Toast';
 import { Toggle } from '@/components/Toggle';
+import { EstimatedDurationField } from '@/features/tasks/EstimatedDurationField';
 
 describe('Button', () => {
   it('supports variants, loading and disabled states', () => {
@@ -94,6 +95,22 @@ describe('TextField', () => {
     const input = screen.getByRole('textbox', { name: 'Name' });
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByText('Required')).toBeTruthy();
+  });
+
+  describe('EstimatedDurationField', () => {
+    it('sélectionne une durée, permet une saisie manuelle et efface la valeur', () => {
+      const values: Array<number | null> = [];
+      render(<EstimatedDurationField onChange={(value) => values.push(value)} value={30} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Autre' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Minutes' }), { target: { value: '90' } });
+      expect(values.at(-1)).toBe(90);
+      expect(screen.getByRole('textbox', { name: 'Heures' })).toHaveValue('1');
+      expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('30');
+      fireEvent.change(screen.getByRole('textbox', { name: 'Minutes' }), { target: { value: '-5' } });
+      expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('30');
+      fireEvent.click(screen.getByRole('button', { name: 'Effacer' }));
+      expect(values.at(-1)).toBeNull();
+    });
   });
 });
 

@@ -6,7 +6,7 @@ DayFlow se construit comme application Vite statique (`npm run build`, sortie `d
 
 - Version Node : 24.20.0 (`.nvmrc` et `engines` dans `package.json`). Sélectionner cette version dans les deux projets.
 - Commande de build : `npm run build`. Répertoire de sortie : `dist`.
-- Définir toutes les variables de build `VITE_FIREBASE_*` de `.env.example` : `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID` et `VITE_FIREBASE_MEASUREMENT_ID`. `VITE_FIREBASE_AUTH_DOMAIN` reste configurable séparément sur chaque plateforme. Ces valeurs sont intégrées au bundle public : ne pas y mettre de secret.
+- Variables obligatoires : `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` et `VITE_FIREBASE_APP_ID`. Elles identifient l'application Firebase et les projets utilisés par Auth et Firestore. `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_STORAGE_BUCKET` et `VITE_FIREBASE_MEASUREMENT_ID` sont optionnelles et non utilisées par le code actuel (pas de Cloud Messaging, Cloud Storage ni Analytics). `VITE_FIREBASE_AUTH_DOMAIN` peut varier par plateforme. Toutes les valeurs `VITE_*` sont intégrées au bundle public : ne pas y mettre de secret.
 - En production, les émulateurs ne sont jamais utilisés, même avec `VITE_USE_EMULATORS=true`. Si une variable requise manque, l'application affiche les seuls noms des variables à configurer.
 - Vercel lit `vercel.json` et ignore `public/_redirects`/`public/_headers`. Cloudflare Pages lit les deux fichiers dans `public/` et ignore `vercel.json`. Les fichiers statiques existants gardent la priorité sur le repli SPA afin que `sw.js`, le manifeste et les icônes restent de vrais fichiers.
 - La CSP est temporairement envoyée en mode `Content-Security-Policy-Report-Only` sur les deux hébergeurs pour le premier déploiement. Vérifier les parcours et les rapports sans violation ; `X-Frame-Options: DENY` maintient la protection contre l'encadrement. TODO : repasser en mode application après vérification sans violation.
@@ -48,6 +48,13 @@ Si Google échoue lors de la redirection à cause du stockage tiers, une Pages F
 - Activer le mode avion, vérifier le démarrage et les données locales, créer/modifier une tâche, rétablir le réseau et vérifier la synchronisation.
 - Tester la connexion e-mail puis Google dans le navigateur et dans l'app installée.
 - Après un nouveau build, vérifier l'apparition de la bannière « Nouvelle version » et le chargement de la version mise à jour.
+
+## Vérifier l’installation de la PWA
+
+- **Ordinateur et Android** : ouvrir DayFlow dans un navigateur compatible, se connecter, puis créer une tâche ou revenir une deuxième fois dans l’application. La carte d’installation doit apparaître sans déclencher le dialogue du navigateur avant le clic sur « Installer ». Vérifier l’acceptation, le refus, le bouton « Plus tard » et l’événement d’installation ; après l’ajout, lancer DayFlow depuis son icône et vérifier que la carte et la ligne des réglages sont masquées.
+- **iPhone et iPad** : ouvrir DayFlow dans Safari, attendre l’une des deux conditions d’affichage, toucher « Voir comment », puis suivre « Partager » et « Sur l’écran d’accueil ». Dans un autre navigateur iOS, vérifier que la feuille demande d’ouvrir DayFlow dans Safari. Lancer ensuite l’icône ajoutée : l’application doit être reconnue comme installée.
+- **Tests automatisés** : `npm run test:e2e` simule `beforeinstallprompt`, les états d’installation, le report et les formats 360 × 640, 390 × 844, 412 × 915, 768 × 1024, 1280 × 800 et paysage 844 × 390.
+- Les compteurs de visites, reports et refus, ainsi que les indicateurs d’installation, sont conservés dans `localStorage` sous la clé `dayflow.install.preferences.v1` ; ils ne contiennent aucune donnée personnelle. Pour recommencer le scénario, supprimer uniquement cette clé dans les données du site de test.
 
 ## Deux plateformes, deux applications pour le navigateur
 

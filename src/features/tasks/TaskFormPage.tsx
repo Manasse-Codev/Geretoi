@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Bell, CalendarDays, ChevronDown, Flame, FolderOpen, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Checkbox } from '@/components/Checkbox';
@@ -11,6 +11,7 @@ import { useTags } from '@/features/tags/useTags';
 import { useTaskActions } from '@/features/tasks';
 import { fr } from '@/i18n/fr';
 import { setUnsavedChanges } from '@/lib/unsavedChanges';
+import { EstimatedDurationField } from '@/features/tasks/EstimatedDurationField';
 import type { TaskPriority, Subtask } from '@/types/models';
 
 function localDateString(date: Date) {
@@ -20,6 +21,7 @@ function localDateString(date: Date) {
 
 export function TaskFormPage() {
   const navigate = useNavigate();
+  const { taskId } = useParams<{ taskId: string }>();
   const actions = useTaskActions();
   const listsState = useLists(); const lists = listsState.lists;
   const tagsState = useTags(); const tags = tagsState.tags;
@@ -29,15 +31,27 @@ export function TaskFormPage() {
   const [time, setTime] = useState('09:30');
   const [priority, setPriority] = useState<TaskPriority>(3);
   const [listId, setListId] = useState('');
-  const [minutes, setMinutes] = useState<number | null>(30);
+  const [minutes, setMinutes] = useState<number | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [draftSubtask, setDraftSubtask] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingTask, setLoadingTask] = useState(Boolean(taskId));
   const priorities: TaskPriority[] = [4, 3, 2, 1];
 
+  useEffect(() => {
+    let active = true;
+    if (!taskId) return () => undefined;
+    void actions.get(taskId).then((task) => {
+      if (!active) return;
+      setTitle(task.title); setDescription(task.description ?? ''); setDate(task.dueDate ? localDateString(task.dueDate) : '');
+      setTime(task.startTime ?? ''); setPriority(task.priority); setListId(task.listId ?? '');
+      setMinutes(task.estimatedMinutes ?? null); setSelectedTags(task.tags); setSubtasks(task.subtasks); setLoadingTask(false);
+    }).catch(() => { if (active) { setError(fr.data.errors.notFound); setLoadingTask(false); } });
+    return () => { active = false; };
+  }, [actions.get, taskId]);
   useEffect(() => () => setUnsavedChanges(false), []);
 
   function makeDueDate(value: string) {
@@ -51,8 +65,9 @@ export function TaskFormPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await actions.create({ title, description, priority, dueDate: makeDueDate(date), startTime: time || null, estimatedMinutes: minutes, listId: listId || null, tags: selectedTags, subtasks });
-      window.dispatchEvent(new Event('dayflow:task-created'));
+      if (taskId) await actions.update(taskId, { title, description, priority, dueDate: makeDueDate(date), startTime: time || null, estimatedMinutes: minutes, listId: listId || null, tags: selectedTags, subtasks });
+      else await actions.create({ title, description, priority, dueDate: makeDueDate(date), startTime: time || null, estimatedMinutes: minutes, listId: listId || null, tags: selectedTags, subtasks });
+      if (!taskId) window.dispatchEvent(new Event('dayflow:task-created'));
       if (again) { setTitle(''); setDescription(''); setSubtasks([]); setDraftSubtask(''); }
       else { setUnsavedChanges(false); navigate(-1); }
     } catch { setError(actions.errorMessage ?? fr.task.createError); }
@@ -71,8 +86,9 @@ export function TaskFormPage() {
   const weekendOffset = (6 - new Date().getDay() + 7) % 7;
   const quickDates = [['Aujourd’hui', 0], ['Demain', 1], ['Ce week-end', weekendOffset]] as const;
 
+  if (loadingTask) return <div className="screen screen--task-form"><p>{fr.auth.loading}</p></div>;
   return <div className="screen screen--task-form">
-    <header className="form-toolbar"><Button aria-label={fr.task.cancel} disabled={submitting} onClick={() => { setUnsavedChanges(false); navigate(-1); }} variant="ghost"><ArrowLeft size={18} />{fr.task.cancel}</Button><h1>{fr.pages.newTask}</h1><Button aria-label={fr.task.add} className="form-save" disabled={submitting} loading={submitting} onClick={() => void submit()} variant="primary">✓</Button></header>
+    <header className="form-toolbar"><Button aria-label={fr.task.cancel} disabled={submitting} onClick={() => { setUnsavedChanges(false); navigate(-1); }} variant="ghost"><ArrowLeft size={18} />{fr.task.cancel}</Button><h1>{taskId ? fr.pages.editTask : fr.pages.newTask}</h1><Button aria-label={fr.task.save} className="form-save" disabled={submitting} loading={submitting} onClick={() => void submit()} variant="primary">✓</Button></header>
     <form className="task-form" onChange={() => setUnsavedChanges(true)} onClickCapture={(event) => { if ((event.target as HTMLElement).closest('button')) setUnsavedChanges(true); }} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
       <TextField autoFocus error={error ?? undefined} label={fr.task.title} onChange={(event) => setTitle(event.currentTarget.value)} placeholder={fr.taskForm.titlePlaceholder} value={title} />
       <div className="quick-date-row" role="group" aria-label={fr.taskForm.dateLabel}>
@@ -88,7 +104,7 @@ export function TaskFormPage() {
         {detailsOpen && <div className="task-details__body">
           <div className="form-two-col"><TextField label={fr.task.dueDate} onChange={(event) => setDate(event.currentTarget.value)} type="date" value={date} /><TextField label={fr.taskForm.time} onChange={(event) => setTime(event.currentTarget.value)} type="time" value={time} /></div>
           <TextField label={fr.task.description} onChange={(event) => setDescription(event.currentTarget.value)} placeholder="Ajouter quelques détails…" value={description} />
-          <fieldset className="choice-field"><legend>{fr.taskForm.estimate}</legend><div className="choice-row">{[15, 30, 45, 60, 120].map((value) => <button aria-pressed={minutes === value} className="filter-chip surface-raised" key={value} onClick={() => setMinutes(value)} type="button">{value < 60 ? `${value} min` : `${value / 60} h`}</button>)}</div></fieldset>
+          <EstimatedDurationField onChange={setMinutes} value={minutes} />
           <fieldset className="choice-field"><legend>{fr.task.priority}</legend><div className="choice-row">{priorities.map((value) => <button aria-pressed={priority === value} className={`priority-choice priority-choice--${value}`} key={value} onClick={() => setPriority(value)} type="button">{fr.priorities[value].label}</button>)}</div></fieldset>
           {tags.length > 0 && <fieldset className="choice-field"><legend>{fr.taskForm.tags}</legend><div className="choice-row">{tags.map((tag) => <button aria-pressed={selectedTags.includes(tag.id)} className="filter-chip surface-raised" key={tag.id} onClick={() => setSelectedTags((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])} type="button">{tag.name}</button>)}</div></fieldset>}
           <fieldset className="choice-field"><legend>Sous-tâches ({subtasks.filter((item) => item.done).length}/{subtasks.length})</legend>{subtasks.map((subtask) => <div className="subtask-edit-row" key={subtask.id}><Checkbox checked={subtask.done} label={subtask.title} onCheckedChange={(done) => setSubtasks((items) => items.map((item) => item.id === subtask.id ? { ...item, done } : item))} /><span className={subtask.done ? 'is-done' : ''}>{subtask.title}</span><button aria-label={`Retirer ${subtask.title}`} className="icon-button" onClick={() => setSubtasks((items) => items.filter((item) => item.id !== subtask.id))} type="button"><Trash2 size={16} /></button></div>)}<div className="add-subtask-row"><input aria-label={fr.taskForm.subtaskPlaceholder} className="text-control" onChange={(event) => setDraftSubtask(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addSubtask(); } }} placeholder={fr.taskForm.subtaskPlaceholder} value={draftSubtask} /><Button aria-label={fr.taskForm.addSubtask} onClick={addSubtask}><Plus size={17} /></Button></div></fieldset>
@@ -97,7 +113,7 @@ export function TaskFormPage() {
       {error && <p className="inline-error" role="alert">{error}</p>}
       {listsState.errorMessage && <RetryNotice loading={listsState.loading} message={listsState.errorMessage} onRetry={listsState.retry} />}
       {tagsState.errorMessage && <RetryNotice loading={tagsState.loading} message={tagsState.errorMessage} onRetry={tagsState.retry} />}
-      <div className="form-actions"><Button className="form-submit" disabled={submitting} loading={submitting} onClick={() => void submit()} type="button" variant="primary"><Plus size={19} />{fr.task.add}</Button><Button disabled={submitting} loading={submitting} onClick={() => void submit(true)} variant="ghost">{fr.task.addAnother}</Button></div>
+      <div className="form-actions"><Button className="form-submit" disabled={submitting} loading={submitting} onClick={() => void submit()} type="button" variant="primary"><Plus size={19} />{taskId ? fr.task.save : fr.task.add}</Button>{!taskId && <Button disabled={submitting} loading={submitting} onClick={() => void submit(true)} variant="ghost">{fr.task.addAnother}</Button>}</div>
     </form>
   </div>;
 }

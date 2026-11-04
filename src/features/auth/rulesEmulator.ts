@@ -120,6 +120,26 @@ describe('règles Firestore (émulateur)', () => {
     await assertFails(setDoc(doc(db, 'users/owner/tasks/invalid'), taskData));
   });
 
+  it.each([
+    ['zéro', 0],
+    ['négatif', -5],
+    ['au-delà de 24 heures', 1441],
+    ['décimal', 12.5],
+    ['chaîne', '30'],
+    ['très grand nombre', Number.MAX_SAFE_INTEGER],
+  ])('refuse estimatedMinutes invalide (%s)', async (_description, estimatedMinutes) => {
+    const db = testEnvironment.authenticatedContext('owner').firestore();
+    await assertFails(setDoc(doc(db, 'users/owner/tasks/invalid-duration'), { ...validTask, estimatedMinutes }));
+  });
+
+  it('autorise estimatedMinutes absent, null et borné', async () => {
+    const db = testEnvironment.authenticatedContext('owner').firestore();
+    await assertSucceeds(setDoc(doc(db, 'users/owner/tasks/no-duration'), validTask));
+    await assertSucceeds(setDoc(doc(db, 'users/owner/tasks/null-duration'), { ...validTask, estimatedMinutes: null }));
+    await assertSucceeds(setDoc(doc(db, 'users/owner/tasks/min-duration'), { ...validTask, estimatedMinutes: 1 }));
+    await assertSucceeds(setDoc(doc(db, 'users/owner/tasks/max-duration'), { ...validTask, estimatedMinutes: 1440 }));
+  });
+
   it('refuse une collection non déclarée, même sous le uid du propriétaire', async () => {
     const db = testEnvironment.authenticatedContext('owner').firestore();
     await assertFails(setDoc(doc(db, 'users/owner/privateNotes/note-1'), { note: 'non autorisée' }));

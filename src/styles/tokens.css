@@ -23,6 +23,23 @@
   --radius-control: 16px;
   --radius-pill: 9999px;
   --space-unit: 8px;
+  --size-screen-title: 2.25rem;
+  --size-today-title: 3rem;
+  --size-section-title: 1.25rem;
+  --size-task-title: 1.08rem;
+  --size-body: 1rem;
+  --size-meta: .8125rem;
+  --size-icon: 1.25rem;
+  --space-page-inline: 1.25rem;
+  --space-screen-gap: 1.25rem;
+  --space-card-padding: 1rem;
+  --space-task-gap: .75rem;
+  --space-task-list-gap: .875rem;
+  --size-top-three-ring: 4.875rem;
+  --size-bottom-nav-height: 4rem;
+  --size-fab: 4rem;
+  --size-filter-chip: 2.75rem;
+  --size-input-height: 3rem;
   --motion-fast: 120ms;
   --motion-medium: 240ms;
   --motion-slow: 400ms;
@@ -98,4 +115,34 @@
   --radius-dayflow-pill: var(--radius-pill);
   --shadow-dayflow-raised: var(--shadow-raised);
   --shadow-dayflow-inset: var(--shadow-inset);
+}
+
+@media (max-width: 47.999rem) {
+  :root {
+    --size-screen-title: clamp(1.75rem, 7.2vw, 1.875rem);
+    --size-today-title: clamp(1.75rem, 7.2vw, 1.875rem);
+    --size-section-title: clamp(1.125rem, 4.7vw, 1.25rem);
+    --size-task-title: clamp(1rem, 4.1vw, 1.0625rem);
+    --size-body: clamp(.9375rem, 3.9vw, 1rem);
+    --size-meta: clamp(.8125rem, 3.2vw, .875rem);
+    --size-icon: clamp(1.25rem, 5.2vw, 1.375rem);
+    --space-page-inline: 1rem;
+    --space-screen-gap: clamp(.875rem, 3.8vw, 1rem);
+    --space-card-padding: clamp(.8125rem, 3.5vw, .875rem);
+    --space-task-gap: .625rem;
+    --space-task-list-gap: .625rem;
+    --size-top-three-ring: clamp(4.125rem, 17.5vw, 4.375rem);
+    --size-bottom-nav-height: 4rem;
+    --size-fab: 3.5rem;
+    --size-filter-chip: 2.75rem;
+    --size-input-height: 3rem;
+    --radius-card: 1.25rem;
+  }
+
+  :root[data-density='compact'] {
+    --space-screen-gap: clamp(.8125rem, 3.4vw, .9375rem);
+    --space-card-padding: clamp(.75rem, 3.1vw, .8125rem);
+    --space-task-gap: .5625rem;
+    --space-task-list-gap: .5625rem;
+  }
 }

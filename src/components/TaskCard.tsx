@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, Flame, Minus, Clock3, ListChecks, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Flame, Minus, Clock3, ListChecks, MoreHorizontal, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import type { Task } from '@/types/models';
 import { format } from 'date-fns';
 import { fr as frDate } from 'date-fns/locale';
 import { Checkbox } from '@/components/Checkbox';
 import { fr } from '@/i18n/fr';
 import { formatClockTime } from '@/lib/dates';
+import { formatDuration } from '@/lib/duration';
 
 const priorityIcons = { 1: Flame, 2: ArrowUp, 3: Minus, 4: ArrowDown } as const;
 
-export function TaskCard({ task, onComplete, onReopen, onDelete, onSubtask, onReschedule, onRestore, variant = 'active', listName, canDeleteForever }: {
+export function TaskCard({ task, onComplete, onReopen, onDelete, onSubtask, onReschedule, onRestore, onEdit, variant = 'active', listName, canDeleteForever }: {
   task: Task; onComplete?: () => void; onReopen?: () => void; onDelete?: () => void;
   onSubtask?: (id: string, checked: boolean) => void; onReschedule?: () => void; onRestore?: () => void;
+  onEdit?: () => void;
   variant?: 'active' | 'history' | 'trash'; listName?: string; canDeleteForever?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -33,13 +35,14 @@ export function TaskCard({ task, onComplete, onReopen, onDelete, onSubtask, onRe
             {dueText && <span><Clock3 aria-hidden="true" size={15} />{dueText}</span>}
             {listName && <span className="task-card__list">{listName}</span>}
             {subtaskCount > 0 && <button aria-expanded={expanded} className="task-card__meta-button" onClick={() => setExpanded((value) => !value)} type="button"><ListChecks aria-hidden="true" size={15} />{subtaskDone}/{subtaskCount} {fr.task.subtasks}</button>}
-            {task.estimatedMinutes && <span>{task.estimatedMinutes} min</span>}
+            {task.estimatedMinutes !== null && task.estimatedMinutes !== undefined && <span>{formatDuration(task.estimatedMinutes)}</span>}
           </div>
           {expanded && subtaskCount > 0 && <ul className="subtask-list">{task.subtasks.map((subtask) => <li key={subtask.id}>{variant === 'active' && onSubtask ? <Checkbox checked={subtask.done} label={subtask.title} onCheckedChange={(checked) => onSubtask(subtask.id, checked)} /> : <span aria-hidden="true">{subtask.done ? '✓' : '○'}</span>}<span className={subtask.done ? 'is-done' : ''}>{subtask.title}</span></li>)}</ul>}
         </div>
       </div>
       <div className="task-card__actions">
         {variant === 'active' && <>
+          {onEdit && <button className="icon-button surface-raised" onClick={onEdit} aria-label={`${fr.listsPage.edit} : ${task.title}`} type="button"><Pencil size={18} /></button>}
           {onReschedule && <button className="icon-button surface-raised" onClick={onReschedule} aria-label={`${fr.task.reschedule} : ${task.title}`} type="button"><Clock3 size={18} /></button>}
           {onDelete && <button className="icon-button surface-raised" onClick={onDelete} aria-label={`${fr.task.delete} : ${task.title}`} type="button"><Trash2 size={18} /></button>}
         </>}

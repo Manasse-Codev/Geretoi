@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Flame, Search, SlidersHorizontal, Sparkles, Sun } from 'lucide-react';
 import { isSameDay } from 'date-fns';
 import { Card } from '@/components/Card';
@@ -18,6 +19,7 @@ type Filter = 'all' | 'overdue' | 'priority' | 'done';
 interface UndoToast { message: string; undo: () => Promise<void> }
 
 export function TodayPage() {
+  const navigate = useNavigate();
   const today = useTodayTasks();
   const overdue = useOverdueTasks();
   const history = useHistory();
@@ -67,7 +69,7 @@ export function TodayPage() {
     </div>
     <div className="section-heading"><h2>{fr.task.planned}</h2><span>{today.tasks.length} {fr.todayPage.remaining}</span></div>
     {today.loading && today.tasks.length === 0 ? <div className="task-list" aria-busy="true"><div className="task-skeleton surface-raised" /><div className="task-skeleton surface-raised" /></div> : shown.length === 0 ? <EmptyState title={fr.task.empty} description={fr.task.emptyDescription} /> : <div className="task-list">
-      {shown.map((task: Task) => <TaskCard key={task.id} task={task} variant={filter === 'done' ? 'history' : 'active'} listName={lists.find((list) => list.id === task.listId)?.name} onComplete={filter === 'done' ? undefined : () => void perform(fr.task.undoComplete, () => actions.complete(task.id))} onReopen={filter === 'done' ? () => void actions.reopen(task.id).catch(() => undefined) : undefined} onDelete={filter === 'done' ? undefined : () => void perform(fr.task.undoDelete, () => actions.softDelete(task.id))} onSubtask={(id, checked) => void actions.toggleSubtask(task.id, id, checked).catch(() => undefined)} onReschedule={filter === 'done' ? undefined : () => { const next = new Date(); next.setDate(next.getDate() + 1); void perform(fr.task.undoReschedule, () => actions.reschedule(task.id, next)); }} />)}
+      {shown.map((task: Task) => <TaskCard key={task.id} task={task} variant={filter === 'done' ? 'history' : 'active'} listName={lists.find((list) => list.id === task.listId)?.name} onEdit={filter === 'done' ? undefined : () => navigate(`/edit/${task.id}`)} onComplete={filter === 'done' ? undefined : () => void perform(fr.task.undoComplete, () => actions.complete(task.id))} onReopen={filter === 'done' ? () => void actions.reopen(task.id).catch(() => undefined) : undefined} onDelete={filter === 'done' ? undefined : () => void perform(fr.task.undoDelete, () => actions.softDelete(task.id))} onSubtask={(id, checked) => void actions.toggleSubtask(task.id, id, checked).catch(() => undefined)} onReschedule={filter === 'done' ? undefined : () => { const next = new Date(); next.setDate(next.getDate() + 1); void perform(fr.task.undoReschedule, () => actions.reschedule(task.id, next)); }} />)}
     </div>}
     {today.errorMessage && <RetryNotice loading={today.loading} message={today.errorMessage} onRetry={today.retry} />}
     {overdue.errorMessage && <RetryNotice loading={overdue.loading} message={overdue.errorMessage} onRetry={overdue.retry} />}

@@ -1,6 +1,7 @@
 import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { FirestoreDataConverter, QueryDocumentSnapshot, SnapshotOptions, WithFieldValue } from 'firebase/firestore';
 import type { Recurrence, Reminder, Subtask, Task, TaskPriority, TaskStatus } from '@/types/models';
+import { isValidDurationMinutes } from '@/lib/duration';
 
 type TaskDocument = Omit<Task, 'id' | 'completedAt' | 'deletedAt' | 'dueDate' | 'createdAt' | 'updatedAt' | 'reminders'> & {
   completedAt: Timestamp | null;
@@ -67,7 +68,7 @@ function fromDocument(id: string, value: Partial<TaskDocument>): Task {
     dueDate: asDate(value.dueDate),
     priority,
     ...(typeof value.startTime === 'string' || value.startTime === null ? { startTime: value.startTime } : {}),
-    ...(typeof value.estimatedMinutes === 'number' || value.estimatedMinutes === null ? { estimatedMinutes: value.estimatedMinutes } : {}),
+    ...(isValidDurationMinutes(value.estimatedMinutes) || value.estimatedMinutes === null ? { estimatedMinutes: value.estimatedMinutes } : {}),
     listId: typeof value.listId === 'string' ? value.listId : null,
     tags: asStringArray(value.tags),
     links: asStringArray(value.links),

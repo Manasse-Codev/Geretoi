@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ArrowRight, CalendarDays, Check, Cloud, Download, LogOut, Palette, Trash2, UserRound } from 'lucide-react';
@@ -9,12 +9,14 @@ import { Toast } from '@/components/Toast';
 import { useAuth } from '@/features/auth/useAuth';
 import { downloadCalendar, downloadCsv, downloadXlsx, exportAccountData, type ExportOptions, type ExportProgress } from '@/features/settings/exportData';
 import { usePreferences } from '@/features/settings/usePreferences';
+import { useInstallPrompt } from '@/features/install/useInstallPrompt';
 import { fr } from '@/i18n/fr';
 
 export function SettingsPage() {
   const { user, signOut, errorMessage: authErrorMessage } = useAuth();
   const navigate = useNavigate();
   const { preferences, update } = usePreferences();
+  const install = useInstallPrompt();
   const [toast, setToast] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -22,11 +24,6 @@ export function SettingsPage() {
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const exportAbort = useRef<AbortController | null>(null);
   const provider = user?.providerData.find((item) => item.providerId === 'google.com') ? 'Google' : fr.settingsPage.email;
-
-  useEffect(() => {
-    document.documentElement.dataset.density = preferences.density;
-    return () => { delete document.documentElement.dataset.density; };
-  }, [preferences.density]);
 
   async function exportData(format: 'xlsx' | 'csv') {
     if (!user) return;
@@ -79,6 +76,7 @@ export function SettingsPage() {
       <div className="settings-row"><span className="settings-row__icon">{provider === 'Google' ? 'G' : <UserRound size={17} />}</span><span className="settings-row__label">{fr.settingsPage.account} {provider}<small>{user?.email}</small></span><strong className="connected-state"><Check size={14} />{fr.settingsPage.connected}</strong></div>
     </SettingsSection>
     <SettingsSection icon={<Download size={17} />} title={fr.settingsPage.data}>
+      {install.isInstallAvailable && <button className="settings-row settings-row--button" onClick={install.requestInstall} type="button"><span><Download size={17} />{fr.install.settings}</span><ArrowRight size={16} /></button>}
       <div className="settings-export-options">
         <label><input checked={exportOptions.includeHistory} disabled={busy} onChange={(event) => setExportOptions((current) => ({ ...current, includeHistory: event.target.checked }))} type="checkbox" />{fr.settingsPage.includeHistory}</label>
         <label><input checked={exportOptions.includeTrash} disabled={busy} onChange={(event) => setExportOptions((current) => ({ ...current, includeTrash: event.target.checked }))} type="checkbox" />{fr.settingsPage.includeTrash}</label>

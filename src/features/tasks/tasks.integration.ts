@@ -155,6 +155,17 @@ describe('dépôt des tâches sur les émulateurs Auth et Firestore', () => {
     expect(result.dailyCounts.reduce((total, value) => total + value, 0)).toBe(count);
   });
 
+  it('additionne des durées manuelles arbitraires sans arrondi', async () => {
+    const uid = currentUid as string;
+    const now = new Date();
+    for (const [index, estimatedMinutes] of [80, 125, 1440].entries()) {
+      const task = await createTask(uid, { title: `Durée manuelle ${index}`, estimatedMinutes });
+      await completeTask(uid, task.id, now);
+    }
+    const result = await getCompletedTasksInPeriod(uid, new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1), now, 7);
+    expect(result.estimatedMinutes).toBe(1645);
+  });
+
   it('pagine l’historique par 20 tâches terminées', async () => {
     const uid = currentUid as string;
     const completedAt = new Date();

@@ -83,7 +83,7 @@ service cloud.firestore {
         optionalTimestamp(task, 'updatedAt') &&
         optionalString(task, 'startTime', 5) &&
         (!('estimatedMinutes' in task) || task.estimatedMinutes == null ||
-          (task.estimatedMinutes is number && task.estimatedMinutes >= 0 && task.estimatedMinutes <= 1440)) &&
+          (task.estimatedMinutes is int && task.estimatedMinutes >= 1 && task.estimatedMinutes <= 1440)) &&
         optionalString(task, 'listId', 128) &&
         optionalBoundedList(task, 'subtasks', 50) &&
         optionalBoundedList(task, 'tags', 20) &&

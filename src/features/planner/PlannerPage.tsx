@@ -12,14 +12,16 @@ import { useTaskActions, useTasksInRange, useUnscheduledTasks } from '@/features
 import { usePreferences } from '@/features/settings/usePreferences';
 import { fr } from '@/i18n/fr';
 import type { Task } from '@/types/models';
+import { formatDuration } from '@/lib/duration';
 
 const dayKey = (date: Date) => format(date, 'yyyy-MM-dd');
 
 function DraggableTask({ task, onSchedule }: { task: Task; onSchedule?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id, data: { taskId: task.id } });
-  return <article className={`planner-task surface-raised${isDragging ? ' is-dragging' : ''}`} ref={setNodeRef} style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined }}>
+  const blockHeight = Math.max(44, (task.estimatedMinutes ?? 30) * 0.6);
+  return <article className={`planner-task surface-raised${isDragging ? ' is-dragging' : ''}`} ref={setNodeRef} style={{ minHeight: `${blockHeight}px`, transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined }}>
     <button aria-label={`Déplacer ${task.title}`} className="planner-task__drag" {...listeners} {...attributes} type="button"><GripVertical size={17} /></button>
-    <div><h3>{task.title}</h3><p>{task.startTime ? `${task.startTime} · ` : ''}{task.estimatedMinutes ? `${task.estimatedMinutes} min` : 'Durée non estimée'}</p></div>
+    <div><h3>{task.title}</h3><p>{task.startTime ? `${task.startTime} · ` : ''}{task.estimatedMinutes ? formatDuration(task.estimatedMinutes) : fr.plannerPage.timeLimit}</p></div>
     {onSchedule && <button aria-label={`${fr.plannerPage.schedule} ${task.title} ${format(new Date(), 'd MMMM', { locale: frDate })}`} className="icon-button surface-raised" onClick={onSchedule} type="button"><Plus size={18} /></button>}
   </article>;
 }

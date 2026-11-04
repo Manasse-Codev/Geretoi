@@ -70,6 +70,30 @@ Inter est la police de tous les niveaux, avec repli sur les polices système. É
 - Texte courant : 17/24 px ; variante compacte 15/20 px.
 - Métadonnées : 13/18 px ; petits libellés 11/14 px, à éviter pour les informations essentielles.
 
+### Échelle responsive finale
+
+La valeur par défaut est **Confortable**. Entre 360 et 430 px, les valeurs mobiles utilisent `clamp()` et des unités `rem`; à partir de 768 px, les valeurs de la référence desktop restent inchangées. Le mode **Compact** resserre les espacements d'environ 8 % sans réduire les textes sous les seuils WCAG ni les cibles tactiles de 44 px.
+
+| Élément | Mobile confortable (360–430 px) | Mobile compacte | Tablette / desktop (≥768 px) |
+|---|---:|---:|---:|
+| Titre d'écran | `clamp(1.75rem, 7.2vw, 1.875rem)` | identique | `2.25rem` |
+| Titre « Aujourd'hui » | `clamp(1.75rem, 7.2vw, 1.875rem)` | identique | `3rem` |
+| Titre de section | `clamp(1.125rem, 4.7vw, 1.25rem)` | identique | `1.25rem` |
+| Titre de tâche | `clamp(1rem, 4.1vw, 1.0625rem)` | identique | `1.08rem` |
+| Texte courant | `clamp(.9375rem, 3.9vw, 1rem)` | identique | `1rem` |
+| Métadonnées | `clamp(.8125rem, 3.2vw, .875rem)` | identique | `.8125rem` |
+| Marge latérale | `1rem` | identique | `1.25rem` |
+| Espacement entre cartes | `.625rem` | `.5625rem` | `.875rem` |
+| Padding de carte | `.8125–.875rem` | `.75–.8125rem` | `1rem` |
+| Bannière Top 3 / anneau | padding `.8125–.875rem` / `4.125–4.375rem` | idem | `4.875rem` |
+| Barre basse | `4rem` | `4rem` | `4rem` |
+| Bouton « + » / zone tactile | `3.5rem` / `3.5rem` | idem | `4rem` |
+| Icônes de navigation | `1.25–1.375rem` | idem | `1.25rem` |
+| Rayon des cartes | `1.25rem` | idem | `1.5rem` |
+| Puces et champs | `2.75rem` / `3rem` | idem | `2.75rem` / `3rem` |
+
+Le padding inférieur du shell reste réservé à la navigation fixe et à la zone sûre (`env(safe-area-inset-bottom)`), afin qu'aucun contenu ne passe dessous. Le viewport conserve le zoom utilisateur et ne définit ni `maximum-scale`, ni `user-scalable=no`.
+
 ## Formes, ombres et espacements
 
 - Cartes principales et modales : rayon 24 px ; certaines lignes d'historique sont plus compactes (20 px). Boutons, filtres et puces : pilule. Les contrôles secondaires utilisent ponctuellement 12 ou 16 px.

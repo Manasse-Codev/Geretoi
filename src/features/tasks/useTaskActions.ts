@@ -15,6 +15,7 @@ export interface TaskActions {
   clearError: () => void;
   create: (input: TaskInput) => Promise<string>;
   update: (id: string, changes: TaskUpdate) => Promise<void>;
+  get: (id: string) => Promise<import('@/types/models').Task>;
   complete: (id: string) => Promise<UndoAction>;
   reopen: (id: string) => Promise<void>;
   softDelete: (id: string) => Promise<UndoAction>;
@@ -53,6 +54,7 @@ export function useTaskActions(): TaskActions {
 
   const create = useCallback(async (input: TaskInput) => (await run((uid) => createTask(uid, input, new Date(), false))).id, [run]);
   const update = useCallback((id: string, changes: TaskUpdate) => run((uid) => updateTask(uid, id, changes, new Date(), false)), [run]);
+  const get = useCallback((id: string) => run((uid) => getTask(uid, id)), [run]);
   const complete = useCallback((id: string) => run(async (uid) => {
     await completeTask(uid, id, new Date(), false);
     return wrapUndo(() => reopenTask(uid, id, new Date(), false));
@@ -73,5 +75,5 @@ export function useTaskActions(): TaskActions {
   }), [run, wrapUndo]);
 
   const clearError = useCallback(() => setError(null), []);
-  return { error, errorMessage: error ? fr.data.errors[error.code] : null, clearError, create, update, complete, reopen, softDelete, restore, permanentlyDelete, duplicate, toggleSubtask: checkSubtask, reschedule };
+  return { error, errorMessage: error ? fr.data.errors[error.code] : null, clearError, create, update, get, complete, reopen, softDelete, restore, permanentlyDelete, duplicate, toggleSubtask: checkSubtask, reschedule };
 }

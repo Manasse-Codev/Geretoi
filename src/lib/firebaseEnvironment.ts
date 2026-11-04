@@ -3,8 +3,6 @@ export const requiredFirebaseVariables = [
   'VITE_FIREBASE_AUTH_DOMAIN',
   'VITE_FIREBASE_PROJECT_ID',
   'VITE_FIREBASE_APP_ID',
-  'VITE_FIREBASE_MESSAGING_SENDER_ID',
-  'VITE_FIREBASE_MEASUREMENT_ID',
 ] as const;
 
 export function missingFirebaseVariables(env: Record<string, string | undefined>): string[] {

@@ -17,8 +17,15 @@ describe('firebase environment', () => {
       'VITE_FIREBASE_AUTH_DOMAIN',
       'VITE_FIREBASE_PROJECT_ID',
       'VITE_FIREBASE_APP_ID',
-      'VITE_FIREBASE_MESSAGING_SENDER_ID',
-      'VITE_FIREBASE_MEASUREMENT_ID',
     ]);
+  });
+
+  it('does not require optional Firebase service configuration', () => {
+    expect(missingFirebaseVariables({
+      VITE_FIREBASE_API_KEY: 'api-key',
+      VITE_FIREBASE_AUTH_DOMAIN: 'example.firebaseapp.com',
+      VITE_FIREBASE_PROJECT_ID: 'example-project',
+      VITE_FIREBASE_APP_ID: '1:123:web:abc',
+    })).toEqual([]);
   });
 });

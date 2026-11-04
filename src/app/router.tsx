@@ -49,6 +49,7 @@ const routes: RouteObject[] = [
       { path: '/settings', element: suspended(<SettingsPage />), errorElement: <RouteErrorBoundary /> },
       { path: '/settings/delete-account', element: suspended(<AccountDeletionPage />), errorElement: <RouteErrorBoundary /> },
       { path: '/new', element: suspended(<TaskFormPage />), errorElement: <RouteErrorBoundary /> },
+      { path: '/edit/:taskId', element: suspended(<TaskFormPage />), errorElement: <RouteErrorBoundary /> },
       { path: '*', element: <RouteNotFound />, errorElement: <RouteErrorBoundary /> },
     ],
   },

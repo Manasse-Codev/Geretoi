@@ -249,13 +249,17 @@ npm install
 4. Ajouter une application Web et copier la configuration
 5. Copier `.env.example` vers `.env` et renseigner les valeurs :
 
+Variables obligatoires : `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` et `VITE_FIREBASE_APP_ID`. `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID` et `VITE_FIREBASE_MEASUREMENT_ID` sont optionnelles : le code actuel ne les utilise pas.
+
 ```env
 VITE_FIREBASE_API_KEY=...
 VITE_FIREBASE_AUTH_DOMAIN=...
 VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_APP_ID=...
+# Optionnelles
 VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
-VITE_FIREBASE_APP_ID=...
+VITE_FIREBASE_MEASUREMENT_ID=...
 ```
 
 ### 3. Lancer en développement
@@ -321,7 +325,7 @@ Le dépôt est prévu pour être déployé en parallèle sur Vercel Hobby (usage
 
 ## 🔒 Confidentialité
 
-Les données sont stockées dans votre projet Firestore personnel, rattachées à votre compte, et protégées par des règles de sécurité : chaque utilisateur n'accède qu'à ses propres données. Une copie locale est conservée dans le navigateur pour le fonctionnement hors-ligne (non chiffrée par l'application : évitez de vous connecter depuis un appareil partagé). Aucune donnée n'est partagée avec des tiers.
+Les données sont stockées dans votre projet Firebase (Authentication et Firestore), rattachées à votre compte et protégées par des règles de sécurité : chaque utilisateur n'accède qu'à ses propres données. Une copie locale est conservée dans le navigateur pour le fonctionnement hors-ligne (non chiffrée par l'application : évitez de vous connecter depuis un appareil partagé). DayFlow n'initialise pas Firebase Analytics et n'envoie pas d'événements de mesure d'audience. Firebase traite les données nécessaires à l'authentification et au stockage ; aucune télémétrie analytique propre à l'application n'est activée.
 
 Les deux hébergeurs appliquent des en-têtes de sécurité depuis `vercel.json` et `public/_headers`. Après toute modification de `firestore.rules`, exécutez `npm run test:rules` uniquement sur l'émulateur local. Les exigences de divulgation et le périmètre figurent dans [SECURITY.md](SECURITY.md) ; le rapport détaillé est dans [docs/SECURITY.md](docs/SECURITY.md).
 

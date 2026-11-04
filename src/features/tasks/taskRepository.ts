@@ -9,6 +9,7 @@ import { clearSyncError, settleWrite } from '@/lib/syncStatus';
 import { shareSubscription } from '@/lib/sharedSubscription';
 import { getLocalDayBounds } from '@/lib/dates';
 import type { Task, TaskInput, TaskUpdate } from '@/types/models';
+import { isValidDurationMinutes } from '@/lib/duration';
 import { DataError } from './dataErrors';
 import { taskConverter } from './taskConverter';
 
@@ -81,6 +82,9 @@ export function subscribeUnscheduledTasks(uid: string, onData: (tasks: Task[], s
 }
 
 export async function createTask(uid: string, input: TaskInput, now = new Date(), waitForServer = true): Promise<Task> {
+  if (input.estimatedMinutes !== null && input.estimatedMinutes !== undefined && !isValidDurationMinutes(input.estimatedMinutes)) {
+    throw new DataError('invalidData');
+  }
   const reference = doc(getTasksCollection(uid));
   const task: Task = {
     id: reference.id,
@@ -98,6 +102,9 @@ export async function createTask(uid: string, input: TaskInput, now = new Date()
 }
 
 async function updateTaskFields(uid: string, taskId: string, changes: Partial<Task>, waitForServer = true): Promise<void> {
+  if ('estimatedMinutes' in changes && changes.estimatedMinutes !== null && changes.estimatedMinutes !== undefined && !isValidDurationMinutes(changes.estimatedMinutes)) {
+    throw new DataError('invalidData');
+  }
   const safeChanges = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined)) as Partial<Task>;
   delete safeChanges.id;
   delete safeChanges.createdAt;

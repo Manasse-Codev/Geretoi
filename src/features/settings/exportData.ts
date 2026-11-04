@@ -4,6 +4,7 @@ import { getListsCollection } from '@/features/lists/listRepository';
 import { getTagsCollection } from '@/features/tags/tagRepository';
 import { getTasksCollection } from '@/features/tasks/taskRepository';
 import type { List, Tag, Task } from '@/types/models';
+import { formatDuration } from '@/lib/duration';
 
 const EXPORT_PAGE_SIZE = 100;
 export interface ExportOptions {
@@ -67,7 +68,7 @@ export async function exportAccountData(
 
 export const EXPORT_TASK_HEADERS = [
   'Identifiant', 'Titre', 'Description', 'Statut', 'Priorité', 'Liste', 'Étiquettes',
-  'Date d’échéance', 'Heure', 'Durée estimée (minutes)', 'Terminée le', 'Supprimée le',
+  'Date d’échéance', 'Heure', 'Durée estimée (minutes)', 'Durée estimée', 'Terminée le', 'Supprimée le',
   'Créée le', 'Modifiée le', 'Liens', 'Nombre de sous-tâches', 'Sous-tâches terminées',
 ] as const;
 
@@ -100,6 +101,7 @@ export interface ExportTaskRow {
   dueDate: Date | null;
   startTime: string;
   estimatedMinutes: number | null;
+  estimatedLabel: string;
   completedAt: Date | null;
   deletedAt: Date | null;
   createdAt: Date;
@@ -122,6 +124,7 @@ export function buildTaskRows(data: ExportData): ExportTaskRow[] {
     dueDate: task.dueDate,
     startTime: task.startTime ?? '',
     estimatedMinutes: task.estimatedMinutes ?? null,
+    estimatedLabel: formatDuration(task.estimatedMinutes),
     completedAt: task.completedAt,
     deletedAt: task.deletedAt,
     createdAt: task.createdAt,
@@ -136,7 +139,7 @@ export function buildCsv(data: ExportData): string {
   const rows = buildTaskRows(data);
   const values = rows.map((row) => [
     row.id, row.title, row.description, row.status, row.priority, row.list, row.tags,
-    dateOnly(row.dueDate), row.startTime, row.estimatedMinutes, dateTime(row.completedAt),
+    dateOnly(row.dueDate), row.startTime, row.estimatedMinutes, row.estimatedLabel, dateTime(row.completedAt),
     dateTime(row.deletedAt), dateTime(row.createdAt), dateTime(row.updatedAt), row.links,
     row.subtaskCount, row.completedSubtaskCount,
   ]);
@@ -161,10 +164,10 @@ export async function buildXlsxBuffer(data: ExportData): Promise<ArrayBuffer> {
   };
   const tasksSheet = addSheet('Tâches', [...EXPORT_TASK_HEADERS], rows.map((row) => [
     row.id, row.title, row.description, row.status, row.priority, row.list, row.tags, row.dueDate,
-    row.startTime, row.estimatedMinutes, row.completedAt, row.deletedAt, row.createdAt, row.updatedAt,
+    row.startTime, row.estimatedMinutes, row.estimatedLabel, row.completedAt, row.deletedAt, row.createdAt, row.updatedAt,
     row.links, row.subtaskCount, row.completedSubtaskCount,
   ]));
-  [7, 11, 12, 13, 14].forEach((index) => { tasksSheet.getColumn(index).numFmt = 'dd/mm/yyyy'; });
+  [8, 12, 13, 14, 15].forEach((index) => { tasksSheet.getColumn(index).numFmt = 'dd/mm/yyyy'; });
   const subtasks = data.tasks.flatMap((task) => task.subtasks.map((subtask, index) => [task.id, task.title, subtask.title, subtask.done ? 'Oui' : 'Non', index]));
   addSheet('Sous-tâches', ['Identifiant de la tâche', 'Titre de la tâche', 'Titre de la sous-tâche', 'Terminée', 'Ordre'], subtasks);
   addSheet('Listes', ['Identifiant', 'Nom', 'Ordre', 'Couleur', 'Icône'], data.lists.map((list) => [list.id, list.name, list.order, list.color ?? '', list.icon ?? '']));
