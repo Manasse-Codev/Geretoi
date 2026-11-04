@@ -1,8 +1,9 @@
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, getDocsFromServer, limit, onSnapshot, orderBy, query,
-  startAfter, Timestamp, updateDoc, where, writeBatch,
+  collection, deleteDoc, doc, getAggregateFromServer, getCountFromServer, getDoc, getDocs, getDocsFromServer, limit, onSnapshot, orderBy, query,
+  startAfter, sum, Timestamp, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 import type { CollectionReference, QueryDocumentSnapshot, QuerySnapshot } from 'firebase/firestore';
+import { addDays, endOfDay } from 'date-fns';
 import { firestore } from '@/lib/firestore';
 import { clearSyncError, settleWrite } from '@/lib/syncStatus';
 import { shareSubscription } from '@/lib/sharedSubscription';
@@ -20,8 +21,9 @@ const PURGE_GRACE_MS = 60 * 1000;
 export interface SyncMetadata { fromCache: boolean; hasPendingWrites: boolean; isOffline: boolean; errorCode?: import('./dataErrors').DataErrorCode }
 export interface HistoryPage { tasks: Task[]; cursor: QueryDocumentSnapshot<Task> | null; hasMore: boolean; sync: SyncMetadata }
 export interface TrashPage { tasks: Task[]; cursor: QueryDocumentSnapshot<Task> | null; hasMore: boolean; sync: SyncMetadata }
-export interface StatsTasksResult { tasks: Task[]; hasMore: boolean }
-export const STATS_TASK_LIMIT = 100;
+export interface StatsTasksResult { tasks: Task[]; completedCount: number; estimatedMinutes: number; dailyCounts: number[] }
+const STATS_DETAIL_LIMIT = 5;
+const STATS_COUNT_CONCURRENCY = 5;
 
 export function getTasksCollection(uid: string): CollectionReference<Task> {
   return collection(firestore, 'users', uid, 'tasks').withConverter(taskConverter);
@@ -163,20 +165,44 @@ export async function getHistoryPage(uid: string, cursor: QueryDocumentSnapshot<
   return { tasks: pageDocs.map((item) => item.data()), cursor: pageDocs.at(-1) ?? null, hasMore: snapshot.docs.length > PAGE_SIZE, sync: syncMetadata(snapshot) };
 }
 
-export async function getCompletedTasksInPeriod(uid: string, start: Date, end: Date): Promise<StatsTasksResult> {
-  const statsQuery = query(
-    getTasksCollection(uid),
+export async function getCompletedTasksInPeriod(uid: string, start: Date, end: Date, dayCount: 7 | 30): Promise<StatsTasksResult> {
+  const tasks = getTasksCollection(uid);
+  const periodQuery = query(
+    tasks,
+    where('status', '==', 'done'),
+    where('deletedAt', '==', null),
+    where('completedAt', '>=', start),
+    where('completedAt', '<=', end),
+  );
+  const detailQuery = query(
+    tasks,
     where('status', '==', 'done'),
     where('deletedAt', '==', null),
     where('completedAt', '>=', start),
     where('completedAt', '<=', end),
     orderBy('completedAt', 'desc'),
-    limit(STATS_TASK_LIMIT + 1),
+    limit(STATS_DETAIL_LIMIT),
   );
-  const snapshot = await getDocsFromServer(statsQuery);
+  const [countSnapshot, sumSnapshot, detailsSnapshot] = await Promise.all([
+    getCountFromServer(periodQuery),
+    getAggregateFromServer(periodQuery, { estimatedMinutes: sum('estimatedMinutes') }),
+    getDocsFromServer(detailQuery),
+  ]);
+  const dayQueries = Array.from({ length: dayCount }, (_, index) => {
+    const dayStart = addDays(start, index);
+    const dayEnd = new Date(Math.min(endOfDay(dayStart).getTime(), end.getTime()));
+    return query(tasks, where('status', '==', 'done'), where('deletedAt', '==', null), where('completedAt', '>=', dayStart), where('completedAt', '<=', dayEnd));
+  });
+  const dailyCounts: number[] = [];
+  for (let index = 0; index < dayQueries.length; index += STATS_COUNT_CONCURRENCY) {
+    const batch = dayQueries.slice(index, index + STATS_COUNT_CONCURRENCY);
+    dailyCounts.push(...(await Promise.all(batch.map(async (dayQuery) => (await getCountFromServer(dayQuery)).data().count))));
+  }
   return {
-    tasks: snapshot.docs.slice(0, STATS_TASK_LIMIT).map((item) => item.data()),
-    hasMore: snapshot.docs.length > STATS_TASK_LIMIT,
+    tasks: detailsSnapshot.docs.map((item) => item.data()),
+    completedCount: countSnapshot.data().count,
+    estimatedMinutes: sumSnapshot.data().estimatedMinutes ?? 0,
+    dailyCounts,
   };
 }
 

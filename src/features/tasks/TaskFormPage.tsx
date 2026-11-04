@@ -52,6 +52,7 @@ export function TaskFormPage() {
     setSubmitting(true);
     try {
       await actions.create({ title, description, priority, dueDate: makeDueDate(date), startTime: time || null, estimatedMinutes: minutes, listId: listId || null, tags: selectedTags, subtasks });
+      window.dispatchEvent(new Event('dayflow:task-created'));
       if (again) { setTitle(''); setDescription(''); setSubtasks([]); setDraftSubtask(''); }
       else { setUnsavedChanges(false); navigate(-1); }
     } catch { setError(actions.errorMessage ?? fr.task.createError); }

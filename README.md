@@ -13,10 +13,10 @@ La liste ci-dessous décrit le périmètre produit souhaité, pas l'état comple
 | Connexion e-mail et Google, tâches avec sauvegarde, complétion et corbeille | Disponible |
 | Aujourd'hui, listes, étiquettes, Planning hebdomadaire et Historique | Disponible, avec limites décrites dans la feuille de route |
 | Statistiques | Synthèse des tâches terminées chargées ; pas de taux global ni de temps de focus |
-| Préférences, thème, export JSON et calendrier | Disponible |
+| Préférences, thème, export XLSX/CSV et calendrier | Disponible |
 | Installation PWA et utilisation hors ligne | Disponible ; partage entrant et notifications restent à faire |
 | Récurrence automatique, rappels, recherche dans descriptions/sous-tâches, vues enregistrées | À faire |
-| Import CSV/JSON, minuteur Pomodoro, collaboration et page d'accueil configurable | À faire |
+| Import XLSX, minuteur Pomodoro, collaboration et page d'accueil configurable | À faire |
 
 Le détail des fonctionnalités prévues ci-dessous sert de cible produit. Ne pas présenter les éléments marqués « À faire » comme disponibles.
 
@@ -95,7 +95,7 @@ Le détail des fonctionnalités prévues ci-dessous sert de cible produit. Ne pa
 - **Synchronisation en temps réel** entre téléphone, tablette et ordinateur
 - Utilisation hors-ligne : les modifications sont mises en file d'attente puis synchronisées automatiquement
 - Données isolées par utilisateur (règles de sécurité Firestore)
-- Export / import : JSON, CSV
+- Export XLSX et CSV des tâches ; l'import XLSX est une évolution future
 - Export du calendrier (.ics) pour Google Calendar / Apple Calendar / Outlook
 
 ### 11. Personnalisation
@@ -133,7 +133,7 @@ Le détail des fonctionnalités prévues ci-dessous sert de cible produit. Ne pa
 | PWA / hors-ligne | `vite-plugin-pwa` (Workbox) | Gratuit |
 | Base de données + synchro | **Firestore** (persistance hors-ligne activée) | Gratuit (plan Spark) |
 | Authentification | **Firebase Auth** | Gratuit (plan Spark) |
-| Hébergement du front | **Cloudflare Pages** | Gratuit |
+| Hébergement du front | **Vercel Hobby** (usage personnel non commercial) et **Cloudflare Pages**, déployés en parallèle | Gratuit selon les conditions de chaque plateforme |
 | Push (phase 2) | Firebase Cloud Messaging + Cloudflare Worker planifié | Gratuit |
 | Dates | date-fns | Gratuit |
 | Glisser-déposer | dnd-kit | Gratuit |
@@ -143,7 +143,7 @@ Le détail des fonctionnalités prévues ci-dessous sert de cible produit. Ne pa
 ### Pourquoi ces choix ?
 - **Firestore** gère nativement le cache local, le mode hors-ligne et la synchro temps réel : pas besoin de code de synchronisation maison ni de Dexie.
 - **Plan Spark** : aucune carte bancaire requise, jamais de facture (le service s'arrête simplement si un quota est atteint).
-- **Cloudflare Pages** : hébergement statique gratuit, HTTPS inclus (obligatoire pour les Service Workers et les notifications).
+- **Vercel Hobby et Cloudflare Pages** : le même dépôt est déployé comme site statique sur les deux plateformes, en HTTPS (nécessaire aux Service Workers et notifications). Vercel Hobby est réservé à l'usage personnel non commercial.
 
 ### Quotas gratuits à garder en tête (à vérifier sur les pages officielles)
 - Firestore (Spark) : ~50 000 lectures et 20 000 écritures par jour, 1 Gio de stockage
@@ -275,17 +275,9 @@ npm run preview
 
 ---
 
-## ☁️ Déploiement gratuit (Cloudflare Pages)
+## ☁️ Déploiement statique (Vercel + Cloudflare Pages)
 
-1. Pousser le projet sur GitHub
-2. Dans Cloudflare Pages : *Create a project* → connecter le dépôt
-3. Paramètres de build : commande `npm run build`, dossier de sortie `dist`
-4. Ajouter les variables d'environnement `VITE_FIREBASE_*`
-5. Dans Firebase Auth, ajouter le domaine `*.pages.dev` (ou votre domaine) aux **domaines autorisés**
-
-HTTPS est fourni automatiquement.
-
-Alternatives gratuites : Netlify, Vercel (Hobby), GitHub Pages.
+Le dépôt est prévu pour être déployé en parallèle sur Vercel Hobby (usage personnel non commercial) et Cloudflare Pages. Les deux utilisent Node 24.20.0, `npm run build` et `dist`, avec leurs règles de repli SPA et de revalidation. Suivre [docs/DEPLOY.md](docs/DEPLOY.md) pour importer le dépôt, configurer les variables Firebase, les domaines OAuth, les règles/index et tester l'installation mobile. Aucun déploiement n'est déclenché par le build local.
 
 ---
 
@@ -316,7 +308,7 @@ Alternatives gratuites : Netlify, Vercel (Hobby), GitHub Pages.
 **v1.2**
 - [x] Planning horaire avec déplacement des tâches
 - [~] Statistiques de base ; Pomodoro et suivi de temps à faire
-- [~] Export JSON et calendrier ; import à faire
+- [x] Export XLSX/CSV et calendrier ; import XLSX à faire
 
 **v1.3**
 - [ ] Notifications push serveur (FCM + Cloudflare Worker)
@@ -547,7 +539,7 @@ Les tâches n'acceptent que les champs listés et valident les types, valeurs et
 
 ### 9. Sauvegarde et sécurité des données
 
-- Le plan Spark ne fournit pas de sauvegardes automatiques : l'export JSON de l'application est la sauvegarde. Recommander un export régulier.
+- Le plan Spark ne fournit pas de sauvegardes automatiques : l'export XLSX de l'application est la sauvegarde. Il n'est pas encore réimportable ; l'import XLSX est une évolution future. Recommander un export régulier.
 - Activer App Check lorsque l'application sera stable.
 
 ### 10. Checklist avant chaque pull request

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Accordion, AccordionRow } from '@/components/Accordion';
 import { BottomNav } from '@/components/BottomNav';
@@ -170,14 +170,14 @@ describe('Sheet', () => {
 });
 
 describe('BottomNav', () => {
-  it('provides four tabs and an add action', () => {
+  it('provides four tabs and an add action', async () => {
     const onAdd = vi.fn();
     render(<BottomNav active="today" onAdd={onAdd} onNavigate={() => undefined} />);
     expect(screen.getByRole('navigation', { name: 'Navigation principale' }).querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     const navigation = screen.getByRole('navigation', { name: 'Navigation principale' });
     expect(within(navigation).getAllByRole('button')).toHaveLength(5);
-    fireEvent.click(within(navigation).getByRole('button', { name: 'Ajouter une tâche' }));
-    expect(onAdd).toHaveBeenCalledOnce();
+    fireEvent.click(within(navigation).getByRole('button', { name: 'Nouvelle tâche' }));
+    await waitFor(() => expect(onAdd).toHaveBeenCalledOnce());
   });
 });
 

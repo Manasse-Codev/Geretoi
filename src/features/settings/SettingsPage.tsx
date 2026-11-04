@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ArrowRight, CalendarDays, Check, Cloud, Download, LogOut, Palette, Trash2, UserRound } from 'lucide-react';
@@ -7,7 +7,7 @@ import { Card } from '@/components/Card';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { Toast } from '@/components/Toast';
 import { useAuth } from '@/features/auth/useAuth';
-import { downloadCalendar, downloadJson, exportAccountData } from '@/features/settings/exportData';
+import { downloadCalendar, downloadCsv, downloadXlsx, exportAccountData, type ExportOptions, type ExportProgress } from '@/features/settings/exportData';
 import { usePreferences } from '@/features/settings/usePreferences';
 import { fr } from '@/i18n/fr';
 
@@ -18,6 +18,9 @@ export function SettingsPage() {
   const [toast, setToast] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [exportOptions, setExportOptions] = useState<ExportOptions>({ includeHistory: true, includeTrash: false });
+  const [progress, setProgress] = useState<ExportProgress | null>(null);
+  const exportAbort = useRef<AbortController | null>(null);
   const provider = user?.providerData.find((item) => item.providerId === 'google.com') ? 'Google' : fr.settingsPage.email;
 
   useEffect(() => {
@@ -25,13 +28,25 @@ export function SettingsPage() {
     return () => { delete document.documentElement.dataset.density; };
   }, [preferences.density]);
 
-  async function exportJson() {
+  async function exportData(format: 'xlsx' | 'csv') {
     if (!user) return;
-    setBusy(true); setError('');
-    try { const data = await exportAccountData(user.uid); downloadJson('dayflow-export.json', { version: 1, exportedAt: new Date().toISOString(), ...data }); setToast(fr.settingsPage.exportDone); }
-    catch { setError(fr.settingsPage.exportError); }
-    finally { setBusy(false); }
+    const controller = new AbortController();
+    exportAbort.current = controller;
+    setBusy(true); setError(''); setProgress({ current: 0, total: 0, phase: 'preparation' });
+    try {
+      const data = await exportAccountData(user.uid, exportOptions, setProgress, controller.signal);
+      const date = new Date().toISOString().slice(0, 10);
+      if (format === 'xlsx') await downloadXlsx(`dayflow-taches-${date}.xlsx`, data);
+      else downloadCsv(`dayflow-taches-${date}.csv`, data);
+      setToast(fr.settingsPage.exportDone);
+    } catch (caught) {
+      if (!(caught instanceof DOMException && caught.name === 'AbortError')) setError(fr.settingsPage.exportError);
+    } finally {
+      exportAbort.current = null;
+      setBusy(false); setProgress(null);
+    }
   }
+  function cancelExport() { exportAbort.current?.abort(); }
   async function exportIcs() {
     if (!user) return;
     setBusy(true); setError('');
@@ -64,8 +79,14 @@ export function SettingsPage() {
       <div className="settings-row"><span className="settings-row__icon">{provider === 'Google' ? 'G' : <UserRound size={17} />}</span><span className="settings-row__label">{fr.settingsPage.account} {provider}<small>{user?.email}</small></span><strong className="connected-state"><Check size={14} />{fr.settingsPage.connected}</strong></div>
     </SettingsSection>
     <SettingsSection icon={<Download size={17} />} title={fr.settingsPage.data}>
-      <button className="settings-row settings-row--button" disabled={busy} onClick={() => void exportJson()} type="button"><span><Download size={17} />{fr.settingsPage.export}</span><span>JSON <ArrowRight size={16} /></span></button>
+      <div className="settings-export-options">
+        <label><input checked={exportOptions.includeHistory} disabled={busy} onChange={(event) => setExportOptions((current) => ({ ...current, includeHistory: event.target.checked }))} type="checkbox" />{fr.settingsPage.includeHistory}</label>
+        <label><input checked={exportOptions.includeTrash} disabled={busy} onChange={(event) => setExportOptions((current) => ({ ...current, includeTrash: event.target.checked }))} type="checkbox" />{fr.settingsPage.includeTrash}</label>
+      </div>
+      <button className="settings-row settings-row--button" disabled={busy} onClick={() => void exportData('xlsx')} type="button"><span><Download size={17} />{fr.settingsPage.exportXlsx}</span><span>XLSX <ArrowRight size={16} /></span></button>
+      <button className="settings-row settings-row--button" disabled={busy} onClick={() => void exportData('csv')} type="button"><span><Download size={17} />{fr.settingsPage.exportCsv}</span><span>CSV <ArrowRight size={16} /></span></button>
       <button className="settings-row settings-row--button" disabled={busy} onClick={() => void exportIcs()} type="button"><span><CalendarDays size={17} />{fr.settingsPage.exportCalendar}</span><ArrowRight size={16} /></button>
+      {busy && progress && <div className="settings-export-progress" role="status"><span>{fr.settingsPage.exportProgress}</span><span>{progress.current}{progress.total > 1 ? ` / ${progress.total}` : ''}</span><button className="link-button" onClick={cancelExport} type="button">{fr.settingsPage.cancelExport}</button></div>}
       <button className="settings-row settings-row--button" onClick={() => navigate('/trash')} type="button"><span><Trash2 size={17} />{fr.settingsPage.trash}</span><span>{fr.settingsPage.retention30}<ArrowRight size={16} /></span></button>
     </SettingsSection>
     <div className="sensitive-actions"><Button onClick={() => void signOut()} variant="secondary"><LogOut size={17} />{fr.settingsPage.signOut}</Button></div>

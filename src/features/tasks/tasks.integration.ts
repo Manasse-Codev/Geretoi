@@ -9,7 +9,6 @@ import {
   completeTask, createTask, getCompletedTasksInPeriod, getHistoryPage, getTask, getTasksCollection, getTrashPage, purgeExpiredTasks, reopenTask,
   restoreTask, softDeleteTask, subscribeOverdueTasks, subscribeTodayTasks, subscribeUpcomingTasks,
 } from './taskRepository';
-import { completedCountLabel } from '@/features/stats/statsDisplay';
 import { createList, deleteList, getListsCollection, renameList, reorderLists } from '@/features/lists/listRepository';
 import { createTag, deleteTag, getTagsCollection, renameTag, reorderTags } from '@/features/tags/tagRepository';
 import { firestore } from '@/lib/firestore';
@@ -121,11 +120,11 @@ describe('dépôt des tâches sur les émulateurs Auth et Firestore', () => {
     expect(upcomingResult.map((task) => task.id)).toContain(upcomingTask.id);
   });
 
-  it('affiche 100+ quand la période contient plus de tâches terminées que la limite des statistiques', async () => {
+  it.each([{ count: 120, expectedMinutes: 1800 }, { count: 250, expectedMinutes: 3750 }])('calcule les totaux exacts avec $count tâches terminées', async ({ count, expectedMinutes }) => {
     const uid = currentUid as string;
     const now = new Date();
     const batch = writeBatch(firestore);
-    for (let index = 0; index < 120; index += 1) {
+    for (let index = 0; index < count; index += 1) {
       const reference = doc(getTasksCollection(uid));
       batch.set(reference, {
         id: reference.id,
@@ -135,6 +134,7 @@ describe('dépôt des tâches sur les émulateurs Auth et Firestore', () => {
         deletedAt: null,
         dueDate: null,
         priority: 3,
+        estimatedMinutes: 15,
         listId: null,
         tags: [],
         links: [],
@@ -147,11 +147,12 @@ describe('dépôt des tâches sur les émulateurs Auth et Firestore', () => {
     }
     await batch.commit();
 
-    const result = await getCompletedTasksInPeriod(uid, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), now);
-    expect(result.tasks).toHaveLength(100);
-    expect(result.hasMore).toBe(true);
-    expect(completedCountLabel(result.tasks.length, result.hasMore)).toBe('100+');
-    expect(completedCountLabel(result.tasks.length, result.hasMore)).not.toBe('120');
+    const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+    const result = await getCompletedTasksInPeriod(uid, periodStart, now, 7);
+    expect(result.tasks).toHaveLength(5);
+    expect(result.completedCount).toBe(count);
+    expect(result.estimatedMinutes).toBe(expectedMinutes);
+    expect(result.dailyCounts.reduce((total, value) => total + value, 0)).toBe(count);
   });
 
   it('pagine l’historique par 20 tâches terminées', async () => {

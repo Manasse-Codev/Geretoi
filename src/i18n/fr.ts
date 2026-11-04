@@ -162,7 +162,9 @@ export const fr = {
     planning: 'Planification', weekStart: 'Début de semaine', monday: 'Lundi', sunday: 'Dimanche', timeFormat: 'Format de l’heure',
     accountSync: 'Compte & synchronisation',
     connected: 'Connecté', lastSync: 'Synchronisation', offlineMode: 'Hors ligne', localData: 'Données locales', offline: 'Hors ligne', pending: 'En attente', available: 'À jour',
-    data: 'Données', export: 'Exporter mes données',
+    data: 'Données', exportXlsx: 'Exporter les tâches', exportCsv: 'Exporter en CSV',
+    includeHistory: 'Inclure l’historique', includeTrash: 'Inclure la corbeille',
+    exportProgress: 'Préparation de l’export', cancelExport: 'Annuler',
     exportCalendar: 'Exporter le calendrier (.ics)', trash: 'Corbeille', retention30: '30 jours',
     signOut: 'Se déconnecter', exportDone: 'Export téléchargé.', calendarDone: 'Calendrier téléchargé.',
     exportError: 'L’export n’a pas abouti. Vérifiez votre connexion et réessayez.', calendarError: 'Le calendrier n’a pas pu être exporté. Réessayez.',
@@ -235,6 +237,6 @@ export const fr = {
     },
     options: { list: 'Liste', grid: 'Grille', compact: 'Compact' },
     progress: { ring: 'Progression circulaire de démonstration', bar: 'Progression linéaire de démonstration' },
-    bottomNav: { add: 'Ajouter une tâche' },
+    bottomNav: { add: 'Nouvelle tâche' },
   },
 } as const;
