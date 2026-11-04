@@ -1,9 +1,17 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="auto">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#E9EAF0" />
+    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <script>
+      try {
+        const savedTheme = localStorage.getItem('dayflow-theme');
+        if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'auto') document.documentElement.dataset.theme = savedTheme;
+      } catch { /* Le thème système reste actif si le stockage local est inaccessible. */ }
+    </script>
     <title>DayFlow</title>
   </head>
   <body>

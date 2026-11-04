@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { AlertCircle, Check, Globe2 } from 'lucide-react';
+import { AlertCircle, Globe2 } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { Logo } from '@/components/Logo';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/features/auth/useAuth';
 import type { AuthErrorCode } from '@/features/auth/authTypes';
@@ -59,8 +60,7 @@ export function LoginPage() {
   return (
     <main className="auth-screen">
       <Card className="auth-card">
-        <div aria-hidden="true" className="auth-logo surface-raised"><Check size={26} strokeWidth={3} /></div>
-        <p className="auth-brand">DayFlow</p>
+        <Logo className="auth-logo" size="lg" />
         <h1>{creatingAccount ? fr.auth.createAccountTitle : fr.auth.loginTitle}</h1>
         <p className="auth-intro">{fr.auth.subtitle}</p>
 

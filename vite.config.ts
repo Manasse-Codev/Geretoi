@@ -10,11 +10,11 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['icons/*'],
       manifest: {
-        name: 'DayFlow', short_name: 'DayFlow', description: 'Organisez vos journées avec DayFlow.',
+        name: 'DayFlow', short_name: 'DayFlow', description: 'Organisez vos journées avec DayFlow.', lang: 'fr',
         display: 'standalone', start_url: '/', theme_color: '#E9EAF0', background_color: '#E9EAF0',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
         shortcuts: [

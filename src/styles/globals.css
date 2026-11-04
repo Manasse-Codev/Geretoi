@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './tokens.css';
 
+@font-face { font-family: Inter; font-style: normal; font-weight: 100 900; font-display: swap; src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2'); }
 * { box-sizing: border-box; }
 html, body, #root { min-height: 100%; margin: 0; }
 body { min-width: 320px; background: var(--color-background); color: var(--color-text); }
@@ -88,8 +89,21 @@ button, a { font: inherit; }
 .app-header { display: flex; max-width: 720px; justify-content: flex-end; margin: 0 auto 16px; }
 .auth-screen { display: grid; min-height: 100vh; place-items: center; padding: 24px 16px; }
 .auth-card { display: grid; width: min(100%, 440px); justify-items: center; gap: 10px; padding: clamp(24px, 6vw, 40px); }
-.auth-logo { display: grid; width: 56px; height: 56px; place-items: center; border-radius: 20px; color: var(--color-violet); }
-.auth-brand { margin: 2px 0 0; color: var(--color-text-secondary); font-size: .875rem; font-weight: 700; letter-spacing: .08em; }
+.logo { display: inline-flex; align-items: center; gap: .34em; color: var(--color-text); font-family: Inter, ui-sans-serif, sans-serif; font-weight: 600; letter-spacing: -.035em; line-height: 1; white-space: nowrap; }
+.logo--sm { font-size: 1rem; }
+.logo--md { font-size: 1.25rem; }
+.logo--lg { font-size: 1.75rem; }
+.logo__symbol { position: relative; display: inline-grid; width: 1.8em; height: 1.8em; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid var(--color-outline); border-radius: 24%; background: var(--color-card); box-shadow: var(--shadow-raised); }
+.logo__variant { grid-area: 1 / 1; display: block; width: 100%; height: 100%; object-fit: contain; }
+.logo__variant--dark { display: none; }
+:root[data-theme='dark'] .logo__variant--light { display: none; }
+:root[data-theme='dark'] .logo__variant--dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .logo__variant--light { display: none; }
+  :root:not([data-theme='light']) .logo__variant--dark { display: block; }
+}
+.logo--symbol-only { gap: 0; }
+.auth-logo .logo__symbol { border-radius: 24%; }
 .auth-card h1 { margin: 0; text-align: center; font-size: 1.6rem; }
 .auth-intro { margin: 0 0 10px; color: var(--color-text-secondary); text-align: center; }
 .auth-form { display: grid; width: 100%; gap: 16px; }
