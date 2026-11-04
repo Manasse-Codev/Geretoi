@@ -1,5 +1,7 @@
 # Audit de sécurité DayFlow
 
+TODO : repasser en mode application après vérification sans violation. La CSP est temporairement en `Content-Security-Policy-Report-Only` pour le premier déploiement ; `X-Frame-Options: DENY` garde la protection contre l'encadrement pendant cette période.
+
 Audit réalisé sur la branche `audit-securite`, dépôt local, sans accès aux données Firebase réelles. Les essais de règles utilisent uniquement l’émulateur local. Un constat décrit un comportement confirmé par lecture ou test ; « suspicion » signale une hypothèse non démontrée. Les numéros de ligne sont ceux des fichiers observés avant les corrections de cet audit ; rechercher l’identifiant pour retrouver une ligne après évolution.
 
 ## Modèle de menaces
