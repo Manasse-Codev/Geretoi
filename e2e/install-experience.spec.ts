@@ -2,14 +2,10 @@ import { expect, test } from 'playwright/test';
 import { fr } from '../src/i18n/fr';
 
 async function createAccount(page: import('playwright/test').Page) {
-  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   await page.goto('/login');
-  await expect(page.getByRole('heading', { name: 'Ravi de vous revoir' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bienvenue sur DayFlow' })).toBeVisible();
   await expect(page.getByTestId('install-card')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
-  await page.getByLabel('Adresse e-mail').fill(`dayflow-install-${suffix}@example.test`);
-  await page.getByLabel('Mot de passe').fill('dayflow-test-123');
-  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuer sans compte', exact: true }).click();
   await expect(page.getByRole('heading', { name: "Aujourd'hui" })).toBeVisible();
 }
 

@@ -44,9 +44,6 @@ function AppLayoutContent() {
     document.documentElement.dataset.density = preferences.density;
   }, [preferences.density, preferences.theme, preferences.timeFormat]);
   useEffect(() => {
-    if (user) setWelcomeOpen(false);
-  }, [user]);
-  useEffect(() => {
     const onTaskCreated = () => setPulseKey((value) => value + 1);
     window.addEventListener('dayflow:task-created', onTaskCreated);
     return () => window.removeEventListener('dayflow:task-created', onTaskCreated);

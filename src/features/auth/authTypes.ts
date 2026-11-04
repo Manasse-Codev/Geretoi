@@ -2,12 +2,13 @@ import type { User } from 'firebase/auth';
 
 export type AuthErrorCode =
   | 'invalidEmail'
+  | 'emailInUse'
   | 'weakPassword'
   | 'invalidCredentials'
   | 'offline'
   | 'networkUnavailable'
-  | 'popupBlocked'
   | 'pendingWrites'
+  | 'providerUnavailable'
   | 'unknown';
 
 export interface AuthContextValue {
@@ -17,8 +18,8 @@ export interface AuthContextValue {
   errorMessage: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
-  signInGoogle: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   clearError: () => void;
+  continueAnonymously: () => Promise<void>;
 }

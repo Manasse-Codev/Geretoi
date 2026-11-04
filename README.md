@@ -10,7 +10,7 @@ La liste ci-dessous décrit le périmètre produit souhaité, pas l'état comple
 
 | Domaine | État livré |
 |---|---|
-| Connexion e-mail et Google, tâches avec sauvegarde, complétion et corbeille | Disponible |
+| Authentification e-mail/mot de passe et session anonyme, tâches avec sauvegarde, complétion et corbeille | Disponible sous réserve d'activer les fournisseurs Firebase |
 | Aujourd'hui, listes, étiquettes, Planning hebdomadaire et Historique | Disponible, avec limites décrites dans la feuille de route |
 | Statistiques | Synthèse des tâches terminées chargées ; pas de taux global ni de temps de focus |
 | Préférences, thème, export XLSX/CSV et calendrier | Disponible |
@@ -91,7 +91,7 @@ Le détail des fonctionnalités prévues ci-dessous sert de cible produit. Ne pa
 - Partage entrant (Web Share Target) : prévu, pas encore disponible
 
 ### 10. Compte et synchronisation multi-appareils
-- Connexion via **Firebase Authentication** (Google ou email / mot de passe)
+- Connexion via **Firebase Authentication** (adresse e-mail/mot de passe ou session anonyme)
 - **Synchronisation en temps réel** entre téléphone, tablette et ordinateur
 - Utilisation hors-ligne : les modifications sont mises en file d'attente puis synchronisées automatiquement
 - Données isolées par utilisateur (règles de sécurité Firestore)

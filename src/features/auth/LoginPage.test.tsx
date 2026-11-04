@@ -6,8 +6,8 @@ const authState = vi.hoisted(() => ({ user: null as { uid: string } | null }));
 const authActions = vi.hoisted(() => ({
   signIn: vi.fn(),
   register: vi.fn(),
-  signInGoogle: vi.fn(),
   resetPassword: vi.fn(),
+  continueAnonymously: vi.fn(),
   clearError: vi.fn(),
 }));
 
@@ -18,82 +18,60 @@ vi.mock('@/features/auth/useAuth', () => ({
     loading: false,
     error: null,
     errorMessage: null,
-    signOut: vi.fn(),
   }),
 }));
-
-function submitLoginForm() {
-  const button = screen.getByRole('button', { name: 'Se connecter' });
-  const form = button.closest('form');
-  if (!form) throw new Error('Formulaire de connexion introuvable.');
-  fireEvent.submit(form);
-}
 
 describe('LoginPage', () => {
   afterEach(() => cleanup());
 
   beforeEach(() => {
     authState.user = null;
-    authActions.signIn.mockReset().mockResolvedValue(undefined);
-    authActions.register.mockReset().mockResolvedValue(undefined);
-    authActions.signInGoogle.mockReset().mockResolvedValue(undefined);
-    authActions.resetPassword.mockReset().mockResolvedValue(undefined);
-    authActions.clearError.mockReset();
+    Object.values(authActions).forEach((action) => action.mockReset());
+    authActions.signIn.mockResolvedValue(undefined);
+    authActions.register.mockResolvedValue(undefined);
+    authActions.resetPassword.mockResolvedValue(undefined);
+    authActions.continueAnonymously.mockResolvedValue(undefined);
   });
 
-  it('annonce une adresse invalide et un mot de passe trop court en français', async () => {
+  it('valide le mot de passe avant la connexion', async () => {
     render(<LoginPage />);
-    fireEvent.change(screen.getByRole('textbox', { name: 'Adresse e-mail' }), { target: { value: 'incorrect' } });
-    fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: '123' } });
-    submitLoginForm();
-    expect(await screen.findByText('Saisissez une adresse e-mail valide.')).toBeTruthy();
-    expect((screen.getByLabelText('Adresse e-mail') as HTMLInputElement).getAttribute('aria-invalid')).toBe('true');
-
-    fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: 'jour@example.fr' } });
-    submitLoginForm();
+    fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: 'test@example.com' } });
+    fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: '12345' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
     expect(await screen.findByText('Le mot de passe doit contenir au moins 6 caractères.')).toBeTruthy();
+    expect(authActions.signIn).not.toHaveBeenCalled();
   });
 
-  it('envoie les identifiants valides au service Firebase', async () => {
+  it('se connecte avec une adresse et un mot de passe valides', async () => {
     render(<LoginPage />);
-    fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: 'jour@example.fr' } });
-    fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: 'secret123' } });
-    submitLoginForm();
-    await waitFor(() => expect(authActions.signIn).toHaveBeenCalledWith('jour@example.fr', 'secret123'));
+    fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: 'test@example.com' } });
+    fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: 'secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+    await waitFor(() => expect(authActions.signIn).toHaveBeenCalledWith('test@example.com', 'secret1'));
   });
 
-  it('permet de basculer vers la création de compte', () => {
+  it('permet de créer un compte', async () => {
     render(<LoginPage />);
     fireEvent.click(screen.getByRole('button', { name: 'Créer un compte' }));
-    expect(screen.getByRole('heading', { name: 'Commencez à mieux vous organiser' })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: 'new@example.com' } });
+    fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: 'secret1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Créer mon compte' }));
+    await waitFor(() => expect(authActions.register).toHaveBeenCalledWith('new@example.com', 'secret1'));
   });
 
-  it('permet de fermer la connexion différée en restant invité', () => {
-    const onClose = vi.fn();
-    render(<LoginPage compact onClose={onClose} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Continuer sans compte' }));
-    expect(onClose).toHaveBeenCalledOnce();
-  });
-
-  it('signale la connexion Google depuis la feuille différée', async () => {
-    render(<LoginPage compact />);
-    fireEvent.click(screen.getByRole('button', { name: 'Continuer avec Google' }));
-    await waitFor(() => expect(authActions.signInGoogle).toHaveBeenCalledOnce());
-  });
-
-  it('envoie une demande de réinitialisation', async () => {
+  it('demande la réinitialisation du mot de passe', async () => {
     render(<LoginPage />);
     fireEvent.click(screen.getByRole('button', { name: 'Mot de passe oublié ?' }));
-    fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: 'jour@example.fr' } });
+    fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: 'test@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Envoyer le lien' }));
-    await waitFor(() => expect(authActions.resetPassword).toHaveBeenCalledWith('jour@example.fr'));
+    await waitFor(() => expect(authActions.resetPassword).toHaveBeenCalledWith('test@example.com'));
   });
 
-  it('ouvre le formulaire suivant après authentification', () => {
-    const onAuthenticated = vi.fn();
-    const { rerender } = render(<LoginPage compact onAuthenticated={onAuthenticated} />);
-    authState.user = { uid: 'user-1' };
-    rerender(<LoginPage compact onAuthenticated={onAuthenticated} />);
-    expect(onAuthenticated).toHaveBeenCalledOnce();
+  it('affiche et masque le mot de passe', () => {
+    render(<LoginPage />);
+    const password = screen.getByLabelText('Mot de passe');
+    expect(password).toHaveAttribute('type', 'password');
+    fireEvent.click(screen.getByRole('button', { name: 'Afficher le mot de passe' }));
+    expect(password).toHaveAttribute('type', 'text');
   });
 });

@@ -126,7 +126,7 @@ contrôle occupe toute la largeur ; les interrupteurs et valeurs longues suivent
 
 DayFlow s'ouvre directement sur l'interface principale, même lorsqu'aucun compte n'est connecté. Les écrans de découverte affichent un état vide neutre et ne présentent jamais de tâches personnelles fictives ; les lectures et écritures Firestore restent désactivées sans UID authentifié.
 
-La création d'une tâche (`Nouvelle tâche`, bouton d'ajout rapide ou route `/new`) ouvre la feuille d'authentification existante. Elle permet la connexion, la création de compte et Google lorsque ce fournisseur est configuré. La fermeture laisse l'utilisateur en mode invité ; après réussite, la feuille se ferme et le formulaire demandé s'ouvre directement.
+La création d'une tâche (`Nouvelle tâche`, bouton d'ajout rapide ou route `/new`) ouvre la feuille d'authentification. Elle propose l'inscription ou la connexion par adresse e-mail et mot de passe, ainsi que la création d'une session anonyme pour découvrir l'application ; la fermeture laisse l'utilisateur découvrir l'application. Après réussite, la feuille se ferme et le formulaire demandé s'ouvre directement.
 
 Lors du premier lancement sur un appareil, une feuille de bienvenue explique les trois bénéfices principaux de DayFlow. Sa fermeture est mémorisée dans `localStorage`, avec les thèmes existants et `prefers-reduced-motion`.
 
@@ -134,7 +134,9 @@ Lors du premier lancement sur un appareil, une feuille de bienvenue explique les
 
 L'écran et la feuille d'authentification utilisent une composition aérée, avec une largeur maximale tokenisée (`--auth-content-max`), des champs de `3.25rem` à `3.5rem` de haut et des cibles d'action d'au moins `44px`. Les surfaces restent Soft UI, mais l'ombre est volontairement discrète pour éviter l'effet de petite boîte enfermée.
 
-La connexion, l'inscription et la réinitialisation du mot de passe partagent le même composant. Le mot de passe peut être affiché ou masqué ; les erreurs sont annoncées avec une icône et un message lisible. Le formulaire d'inscription ne demande pas de nom tant qu'aucun champ de profil n'est prévu dans le modèle Firebase actuel.
+L'authentification principale utilise Firebase Authentication avec une adresse e-mail et un mot de passe d'au moins six caractères. Le formulaire permet l'inscription, la connexion, l'affichage du mot de passe et la réinitialisation par e-mail. Une session anonyme est créée uniquement lorsque l'utilisateur choisit « Continuer sans compte » et reste persistante entre les ouvertures.
+
+Les comptes anonymes restent séparés des comptes e-mail : aucune fusion automatique n'est effectuée. L'utilisateur peut continuer sans compte ou créer un compte e-mail selon le parcours choisi.
 
 ## Formes, ombres et espacements
 

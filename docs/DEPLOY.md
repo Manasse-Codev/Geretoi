@@ -20,15 +20,9 @@ DayFlow se construit comme application Vite statique (`npm run build`, sortie `d
 3. Définir les variables `VITE_FIREBASE_*` communes dans Production, Preview et Development selon besoin ; reconstruire après une modification.
 4. Ajouter le domaine Vercel et tout domaine personnalisé dans Firebase Authentication → Paramètres → Domaines autorisés.
 5. Depuis un environnement Firebase CLI authentifié et vérifié, publier règles et index : `firebase deploy --only firestore:rules,firestore:indexes`. Cela ne déploie que la configuration Firestore, pas le front.
-6. Suivre la checklist téléphone ci-dessous.
+6. Dans Firebase Authentication, activer **Email/Password** et **Anonymous**, puis ajouter chaque domaine Vercel, Cloudflare Pages et localhost aux domaines autorisés.
 
-Si Google échoue lors de la redirection à cause du stockage tiers, une variante facultative consiste à placer cette réécriture avant le repli SPA dans `vercel.json` :
-
-```json
-{ "source": "/__/auth/:path*", "destination": "https://<projet>.firebaseapp.com/__/auth/:path*" }
-```
-
-Elle n'est pas activée par défaut. Ajouter alors `https://<domaine>/__/auth/handler` aux URI de redirection autorisés du client OAuth Google et `<domaine>` aux domaines autorisés Firebase Authentication.
+Le parcours courant n'utilise ni Google ni téléphone/SMS et ne nécessite aucune réécriture `/__/auth/*`.
 
 ## Cloudflare Pages
 
@@ -37,16 +31,16 @@ Elle n'est pas activée par défaut. Ajouter alors `https://<domaine>/__/auth/ha
 3. Définir les variables `VITE_FIREBASE_*` communes dans Production et Preview selon besoin ; reconstruire après une modification.
 4. Ajouter le domaine `*.pages.dev` concerné et tout domaine personnalisé dans Firebase Authentication → Paramètres → Domaines autorisés.
 5. Depuis un environnement Firebase CLI authentifié et vérifié, publier règles et index : `firebase deploy --only firestore:rules,firestore:indexes`. Cela ne déploie que la configuration Firestore, pas le front.
-6. Suivre la checklist téléphone ci-dessous.
+6. Dans Firebase Authentication, activer **Email/Password** et **Anonymous**, puis ajouter chaque domaine Vercel, Cloudflare Pages et localhost aux domaines autorisés.
 
-Si Google échoue lors de la redirection à cause du stockage tiers, une Pages Function ou un Worker peut relayer `/__/auth/*` vers `https://<projet>.firebaseapp.com/__/auth/*`. `_redirects` ne prend pas en charge une destination absolue ; le proxy n'est pas fourni ni activé par défaut. Ajouter alors `https://<domaine>/__/auth/handler` aux URI de redirection autorisés du client OAuth Google et `<domaine>` aux domaines autorisés Firebase Authentication.
+Le parcours courant n'utilise ni Google ni téléphone/SMS et ne nécessite aucune réécriture `/__/auth/*`.
 
-## Vérification sur téléphone
+## Vérification de l'authentification
 
 - Ouvrir chaque déploiement dans le navigateur, installer/ajouter DayFlow à l'écran d'accueil et vérifier l'icône et le mode autonome.
 - Actualiser une route profonde telle que `/history` dans le navigateur et dans l'app installée.
 - Activer le mode avion, vérifier le démarrage et les données locales, créer/modifier une tâche, rétablir le réseau et vérifier la synchronisation.
-- Tester la connexion e-mail puis Google dans le navigateur et dans l'app installée.
+- Tester l'inscription, la connexion, la réinitialisation par e-mail et le parcours anonyme dans le navigateur et dans l'app installée.
 - Après un nouveau build, vérifier l'apparition de la bannière « Nouvelle version » et le chargement de la version mise à jour.
 
 ## Vérifier l’installation de la PWA

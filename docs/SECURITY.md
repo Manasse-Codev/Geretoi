@@ -39,7 +39,7 @@ Audit réalisé sur la branche `audit-securite`, dépôt local, sans accès aux 
 
 ### Points contrôlés sans constat exploitable
 
-- Auth Google : popup sur ordinateur, redirect sur mobile/PWA ; COOP configuré `same-origin-allow-popups` pour préserver le popup. La connexion Google réelle ne peut être vérifiée sans compte OAuth de test et paramètres autorisés.
+- Authentification e-mail/mot de passe : activer le fournisseur Email/Password dans Firebase Authentication et conserver les domaines de production autorisés. Les mots de passe ne sont jamais stockés dans Firestore.
 - Aucun lien utilisateur rendu en navigation HTML n’a été repéré dans les composants inspectés ; les liens sont exportés comme texte. Ne pas introduire d’URL cliquable sans validation `http:`/`https:` et `rel="noopener noreferrer"`.
 - Manifest généré par Vite : nom, langue, mode standalone, racine `/`, icônes et raccourcis locaux ; aucune URL externe déclarée.
 - Pas de source map publiée explicitement dans la configuration Vite. La production et les assets doivent être vérifiés dans `dist` après build.
@@ -57,7 +57,7 @@ Audit réalisé sur la branche `audit-securite`, dépôt local, sans accès aux 
 
 ## Recommandations de configuration manuelle
 
-1. Firebase Console → Authentication : activer Email/Password et Google uniquement si utilisés ; activer la protection contre l’énumération des e-mails ; définir la politique de mot de passe après choix produit.
+1. Firebase Console → Authentication : activer Email/Password et Anonymous, puis ajouter chaque domaine de déploiement aux domaines autorisés.
 2. Google Cloud Console : restreindre la clé API Web aux référents HTTP exacts des deux origines et aux API nécessaires à Firebase Auth/Firestore ; ne pas considérer cette clé comme un secret.
 3. Firebase Console → Firestore : publier les règles validées avec l’émulateur, jamais depuis cette session ; examiner les quotas et alertes Spark.
 4. GitHub : activer l’alerte Dependabot, secret scanning et push protection ; configurer un workflow CI avec permissions minimales et actions SHA-pinnées.

@@ -11,7 +11,8 @@ vi.mock('@/features/auth/useAuth', () => ({
   useAuth: () => ({
     user: { uid: 'test-user' }, loading: false, error: null, errorMessage: null,
     signIn: async () => undefined, register: async () => undefined,
-    signInGoogle: async () => undefined, resetPassword: async () => undefined, signOut: async () => undefined, clearError: () => undefined,
+    resetPassword: async () => true, signOut: async () => undefined, clearError: () => undefined,
+    continueAnonymously: async () => undefined,
   }),
 }));
 

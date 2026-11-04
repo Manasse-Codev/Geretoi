@@ -2,27 +2,18 @@ import { expect, test } from 'playwright/test';
 import { fr } from '../src/i18n/fr';
 
 async function createAccount(page: import('playwright/test').Page) {
-  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   await page.goto('/login');
-  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
-  await page.getByLabel('Adresse e-mail').fill(`dayflow-${suffix}@example.test`);
-  await page.getByLabel('Mot de passe').fill('dayflow-test-123');
-  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuer sans compte', exact: true }).click();
   await expect(page.getByRole('heading', { name: "Aujourd'hui" })).toBeVisible();
 }
 
 test('crée et termine une tâche, puis synchronise une création hors ligne', async ({ page, context }) => {
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const email = `dayflow-${suffix}@example.test`;
-  const password = 'dayflow-test-123';
   const onlineTitle = `Parcours en ligne ${suffix}`;
   const offlineTitle = `Parcours hors ligne ${suffix}`;
 
   await page.goto('/login');
-  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
-  await page.getByLabel('Adresse e-mail').fill(email);
-  await page.getByLabel('Mot de passe').fill(password);
-  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuer sans compte', exact: true }).click();
   await expect(page.getByRole('heading', { name: "Aujourd'hui" })).toBeVisible();
 
   await page.getByRole('button', { name: fr.design.bottomNav.add, exact: true }).click();

@@ -2,12 +2,8 @@ import { mkdir } from 'node:fs/promises';
 import { expect, test } from 'playwright/test';
 
 async function signIn(page: import('playwright/test').Page) {
-  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   await page.goto('/login');
-  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
-  await page.getByLabel('Adresse e-mail').fill(`layout-${suffix}@example.test`);
-  await page.getByLabel('Mot de passe').fill('dayflow-test-123');
-  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuer sans compte', exact: true }).click();
   await expect(page.locator('main.page-content')).toBeVisible();
 }
 

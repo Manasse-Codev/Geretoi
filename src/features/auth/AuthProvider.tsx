@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { FirebaseError } from 'firebase/app';
 import type { User } from 'firebase/auth';
-import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { fr } from '@/i18n/fr';
 import { AuthContext } from '@/features/auth/authContext';
 import { auth } from '@/lib/firebase';
-import { createEmailAccount, PendingWritesError, sendPasswordReset, signInWithEmail, signInWithGoogle, signOutCurrentUser } from '@/features/auth/authService';
+import { continueAnonymously, createEmailAccount, PendingWritesError, sendPasswordReset, signInWithEmail, signOutCurrentUser } from '@/features/auth/authService';
 import type { AuthContextValue, AuthErrorCode } from '@/features/auth/authTypes';
 import type { UserPreferences } from '@/types/models';
 
@@ -23,12 +23,14 @@ function toAuthErrorCode(error: unknown): AuthErrorCode {
   const code = error instanceof FirebaseError ? error.code : '';
   if (typeof navigator !== 'undefined' && !navigator.onLine && ['auth/network-request-failed', 'unavailable', 'deadline-exceeded'].includes(code)) return 'offline';
   if (code === 'auth/invalid-email') return 'invalidEmail';
+  if (code === 'auth/email-already-in-use') return 'emailInUse';
+  if (code === 'auth/too-many-requests') return 'tooManyRequests';
+  if (code === 'auth/operation-not-allowed') return 'providerUnavailable';
   if (code === 'auth/weak-password') return 'weakPassword';
   if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-login-credentials'].includes(code)) {
     return 'invalidCredentials';
   }
   if (['auth/network-request-failed', 'unavailable', 'deadline-exceeded'].includes(code)) return 'networkUnavailable';
-  if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(code)) return 'popupBlocked';
   return 'unknown';
 }
 
@@ -72,9 +74,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setLoading(false);
       },
     );
-    void getRedirectResult(auth).catch((caught: unknown) => {
-      if (active) reportError(caught);
-    });
     return () => {
       active = false;
       unsubscribe();
@@ -107,22 +106,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }));
   }, [authenticatedUid]);
 
-  const runAuthAction = useCallback(async (action: () => Promise<void>) => {
+  const runAuthAction = useCallback(async <T,>(action: () => Promise<T>): Promise<T | undefined> => {
     setError(null);
     try {
-      await action();
+      return await action();
     } catch (caught: unknown) {
       reportError(caught);
+      return undefined;
     }
   }, [reportError]);
 
-  const signIn = useCallback((email: string, password: string) =>
-    runAuthAction(() => signInWithEmail(email, password)), [runAuthAction]);
-  const register = useCallback((email: string, password: string) =>
-    runAuthAction(() => createEmailAccount(email, password)), [runAuthAction]);
-  const signInGoogle = useCallback(() => runAuthAction(signInWithGoogle), [runAuthAction]);
-  const resetPassword = useCallback((email: string) => runAuthAction(() => sendPasswordReset(email)), [runAuthAction]);
-  const signOutUser = useCallback(() => runAuthAction(signOutCurrentUser), [runAuthAction]);
+  const signIn = useCallback(async (email: string, password: string) => {
+    await runAuthAction(() => signInWithEmail(email, password));
+  }, [runAuthAction]);
+  const register = useCallback(async (email: string, password: string) => {
+    await runAuthAction(() => createEmailAccount(email, password));
+  }, [runAuthAction]);
+  const resetPassword = useCallback(async (email: string) => {
+    const result = await runAuthAction(() => sendPasswordReset(email));
+    return result !== undefined;
+  }, [runAuthAction]);
+  const continueAnonymouslyAction = useCallback(async () => {
+    await runAuthAction(continueAnonymously);
+  }, [runAuthAction]);
+  const signOutUser = useCallback(async () => {
+    await runAuthAction(signOutCurrentUser);
+  }, [runAuthAction]);
   const clearError = useCallback(() => setError(null), []);
 
   const value = useMemo<AuthContextValue>(() => ({
@@ -132,11 +141,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     errorMessage: error ? fr.auth.errors[error] : null,
     signIn,
     register,
-    signInGoogle,
     resetPassword,
     signOut: signOutUser,
     clearError,
-  }), [clearError, error, loading, register, resetPassword, signIn, signInGoogle, signOutUser, user]);
+    continueAnonymously: continueAnonymouslyAction,
+  }), [clearError, continueAnonymouslyAction, error, loading, register, resetPassword, signIn, signOutUser, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
